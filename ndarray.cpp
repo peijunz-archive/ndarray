@@ -4,22 +4,37 @@
 #define NORMAL 0
 #define SHIFT 1
 #define SINGLE 2
+#define POSITIVE 1
+#define NEGATIVE -1
 typedef char dtype;
 struct ndarray{
     int dim;//dimension of the array
-    int flag;
+//    int flag;
     int *shape;//shape of each dimension
     int *stride;//stride of
-    int *shift;//shift of a specific axis
+//    int *shift;//shift of a specific axis
     dtype* head; //head of the array
 };
-//inline int size(ndarray arr){
-//    return arr.stride[0];
-//}
-void printarr(ndarray arr){
+void printarr(ndarray &arr){
     int i,j;
     int ind[arr.dim+1]={0};
-    printf("Dimension:%d\tSize:%d\tFlag:%d\nElements:\n",arr.dim,arr.stride[0],arr.flag);
+    if (arr.dim==1){
+        printf("1D array:\n");
+        for(i=0;i<arr.stride[0];i++)
+            printf("%3d",arr.head[i]);
+        putchar('\n');
+        return;
+    }
+    else if(arr.dim==2){
+        for(i=0;i<arr.shape[0];i++){
+            for (j=0;j<arr.shape[1];j++){
+                printf("%3d",arr.head[i*arr.stride[1]+j]);
+            }
+            putchar('\n');
+        }
+        return;
+    }
+    printf("Dimension:%d\tSize:%d\n",arr.dim,arr.stride[0]);
     printf("Stride\t");
     for(i=0;i<arr.dim;i++)
         printf("%d\t",arr.stride[i+1]);
@@ -42,17 +57,16 @@ void printarr(ndarray arr){
         ind[arr.dim]+=1;
     }
 }
-
 void setmem(ndarray &arr, int dim, int *shape){
     int i=0;
     arr.dim=dim;
     arr.shape=(int *)malloc(sizeof(int)*arr.dim);
     arr.stride=(int *)malloc(sizeof(int)*(arr.dim+1));
-    arr.shift=(int *)malloc(sizeof(int)*arr.dim);
+//    arr.shift=(int *)malloc(sizeof(int)*arr.dim);
     arr.stride[arr.dim]=1;
     for(i=0;i<arr.dim;i++){
         arr.shape[i]=shape[i];
-        arr.shift[i]=0;
+//        arr.shift[i]=0;
         arr.stride[dim-i-1]=arr.stride[dim-i]*shape[dim-i-1];
     }
     arr.head=(dtype *)malloc(sizeof(dtype)*arr.stride[0]);
@@ -63,64 +77,56 @@ void init(ndarray &arr, dtype initval=0){
         arr.head[i]=initval;
     return;
 }
-void init(ndarray &arr, dtype *initarr){
-    for(int i=0;i<arr.stride[0];i++)
-        arr.head[i]=initarr[i];
-    return;
-}
-
 void destroy(ndarray &arr){
     free(arr.shape);
     free(arr.stride);
-    free(arr.shift);
+//    free(arr.shift);
     free(arr.head);
 }
-
-inline int modnav(int a, int b){
-    //Naive modulus function
-    if (a>b-1)
-        return a-b;
-    else if(a<0)
-        return a+b;
-    return a;
-}
-inline int offset(ndarray arr, int *index, int flag=0){
+inline int offset(ndarray arr, int *index){
     int offcount=0,i;
-    //for general condition, offset=stride*((index+shift)mod(shape))
-    if (flag==0){
-        for(i=0;i<arr.dim;i++){
-            offcount+=index[i]*arr.stride[i+1];
-        }
-    }
-    else if(flag==SHIFT){
-        for(i=0;i<arr.dim;i++){
-            offcount+=modnav((index[i]+arr.shift[i]),arr.shape[i])*arr.stride[i+1];
-        }
+    for(i=0;i<arr.dim;i++){
+        offcount+=index[i]*arr.stride[i+1];
     }
     return offcount;
 }
-
-int getval(ndarray &arr, int *index, int flag=0){
-    return arr.head[offset(arr,index,flag)];
+int getval(ndarray &arr, int *index){
+    return arr.head[offset(arr,index)];
 }
-int setval(ndarray &arr, int *index, dtype val, int flag=0){
-    arr.head[offset(arr,index,flag)]=val;
+void setval(ndarray &arr, int *index, dtype val){
+    arr.head[offset(arr,index)]=val;
 }
-inline int overflow(int index, int bound, bool pn){
-    if((!pn)&&(index==0))
+inline int overflow(int index, int bound, int pn){
+    if((pn == NEGATIVE)&&(index==0))
         return -1;
-    else if(pn && (index==(bound-1)))
+    else if((pn==POSITIVE) && (index==(bound-1)))
         return 1;
     return 0;
 }
-dtype rollval(ndarray arr, int rawind, int axis, bool pn=true){
-    int axisind=(rawind%arr.stride[axis])/arr.stride[axis+1];
-    rawind+=arr.stride[axis+1];
+dtype rollval(ndarray arr, int rawind, int axis){
+    int axisind, pn=POSITIVE;
+    if(axis<0){
+        pn=NEGATIVE;
+        axis=-1-axis;
+    }
+    axisind=(rawind%arr.stride[axis])/arr.stride[axis+1];
+    rawind+=pn*arr.stride[axis+1];
     rawind-=overflow(axisind, arr.shape[axis], pn)*arr.stride[axis];
     return arr.head[rawind];
 }
-
-void place(ndarray arr, double prob=0.5){
+int rollindex(ndarray arr, int rawind, int axis, int &dw){//copy of rollval
+    int axisind, pn=POSITIVE;
+    if(axis<0){
+        pn=NEGATIVE;
+        axis=-1-axis;
+    }
+    axisind=(rawind%arr.stride[axis])/arr.stride[axis+1];
+    rawind+=pn*arr.stride[axis+1];
+    dw=overflow(axisind, arr.shape[axis], pn);
+    rawind-=dw*arr.stride[axis];
+    return rawind;
+}
+void place(ndarray arr, double prob){
     for(int i=0;i<arr.stride[0];i++){
         if(myrand()<prob)
             arr.head[i]=1;
