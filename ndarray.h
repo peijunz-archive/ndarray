@@ -1,31 +1,28 @@
 #ifndef NDARRAY_H
 #define NDARRAY_H
+#include <stdio.h>
 
 typedef char dtype;
 
-struct ndarray{
+class ndarray{
+public:
     int dim;//dimension of the array
     int *shape;//shape of each dimension
-    int *stride;//stride[0] is size
+    int *stride;//stride of
     dtype *head; //head of the array
+    ndarray(int d, int width);
+    void reset(int d, int w);
+    ndarray(int dim, int *shape);
+    ndarray():dim(0),shape(NULL),stride(NULL){}
+    ~ndarray();
+    inline int size();
+    void print();
+    int rollindex(int rawind, int axis);
+    dtype rollval(int rawind, int axis);
 };
 
-void setmem(ndarray &arr, int dim, int *shape);
+void randomize(ndarray &a, double prob);
 
-void destroy(ndarray &arr);
-
-void init(ndarray &arr, dtype initval=0);//Tested
-
-dtype rollval(ndarray arr, int rawind, int axis);
-
-int rollindex(ndarray arr, int rawind, int axis, int &dw);
-
-void place(ndarray arr, double prob=0.5);//Tested
-
-int getval(ndarray &arr, int *index, int flag=0);//Tested
-
-void setval(ndarray &arr, int *index, dtype val, int flag=0);//Tested
-
-void printarr(ndarray &arr);//Tested
+void homogenize(ndarray &a, dtype initval=0);
 
 #endif //NDARRAY_H
