@@ -18,6 +18,7 @@ public:
     ndarray(int d, int width);
     ndarray(int d, int *sh);
     void reset(int d, int width);
+    void reset(int d, int *sh);
     ~ndarray();
     inline int size();
     void print();
@@ -40,6 +41,22 @@ void ndarray::reset(int d, int w){
     for(int i=0;i<d;i++){
         shape[i]=w;
         stride[d-i-1]=stride[d-i]*w;
+    }
+    head=new dtype[stride[0]];
+}
+void ndarray::reset(int d, int *sh){
+    if (dim>0){
+        delete [] shape;
+        delete [] stride;
+        delete [] head;
+    }
+    dim=d;
+    shape=new int[d];
+    stride=new int[d+1];
+    stride[d]=1;
+    for(int i=0;i<d;i++){
+        shape[i]=sh[i];
+        stride[d-i-1]=stride[d-i]*sh[d-i-1];
     }
     head=new dtype[stride[0]];
 }

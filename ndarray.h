@@ -12,6 +12,7 @@ public:
     dtype *head; //head of the array
     ndarray(int d, int width);
     void reset(int d, int w);
+    void reset(int d, int *sh);
     ndarray(int dim, int *shape);
     ndarray():dim(0),shape(NULL),stride(NULL){}
     ~ndarray();
