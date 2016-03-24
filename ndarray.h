@@ -169,14 +169,14 @@ void ndarray<dtype>::print(){
         ind[dim]+=1;
     }
 }
+char inline distribute(double prob){
+    return myrand()<prob?1:0;
+}
 
 template <typename T>
 void randomize(ndarray<T> &a, double prob){
     for(int i=0;i<a.stride[0];i++){
-        if(myrand()<prob)
-            a.head[i]=1;
-        else
-            a.head[i]=0;
+        a.head[i]=distribute(prob);
     }
 }
 
@@ -195,13 +195,10 @@ void homogenize(ndarray<T> &a, T initval=0){
 //    return offcount;
 //}
 
-//int getval(ndarray &arr, int *index){
+//int & getval(ndarray &arr, int *index){
 //    return arr.head[offset(arr,index)];
 //}
 
-//void setval(ndarray &arr, int *index, dtype val){
-//    arr.head[offset(arr,index)]=val;
-//}
 //void setmem(ndarray &arr, int dim, int *shape){
 //    int i=0;
 //    arr.dim=dim;
