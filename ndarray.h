@@ -4,17 +4,27 @@
 #include <iostream>
 #include <cstdarg>
 #include <initializer_list>
+
 template <typename dtype>
 /**
- * @brief The ndarray class
+ * @brief The n-Dimensional array template class
+ *
  * Defined the operations of a ndarray.
  */
 class ndarray{
 public:
-    int dim;//dimension of the array
-    int *shape;//shape of each dimension
-    dtype *head; //head of the array
-    ndarray():dim(0),shape(NULL),stride(NULL){}
+    ///@brief dimension of the array
+    int dim;
+    ///@brief shape of each dimension
+    int *shape;
+    ///@brief head of the array data
+    dtype *head;
+    /**
+     * @brief ndarray<dtype>::ndarray()
+     *
+     * Naive initialization by setting all data to zero without allocating memory
+     */
+    ndarray():dim(0),shape(NULL),head(NULL),stride(NULL){}
     ndarray(int d, int width);
     ndarray(int d, int *sh);
     ndarray(std::initializer_list<int> l);
@@ -29,7 +39,8 @@ public:
     dtype & operator()(int *coo);
     dtype & operator()(int co0,...);
 private:
-    int *stride;//stride of every axis
+    ///@brief stride of every axis
+    int *stride;
     inline int overflow(int index, int bound, bool positive);
 };
 
@@ -77,14 +88,13 @@ dtype & ndarray<dtype>::operator()(int co0, ...){
     return head[offset];
 }
 
-///Set the memory of ndarray
 template <typename dtype>
 /**
  * @brief ndarray<dtype>::set
  * @param d     dimension
  * @param w     width
  *
- * A square matrix
+ * Set memory for an a square matrix
  */
 void ndarray<dtype>::set(int d, int w){
     dim=d;
@@ -117,7 +127,6 @@ void ndarray<dtype>::set(int d, int *sh){
     head=new dtype[stride[0]];
 }
 
-///Initialize the ndarray by various method
 template <typename dtype>
 /**
  * @brief ndarray<dtype>::ndarray
@@ -161,7 +170,8 @@ ndarray<dtype>::ndarray(int d, int *sh){
 template <typename dtype>
 /**
  * @brief ndarray<dtype>::~ndarray
- * Destructor
+ *
+ * Free all allocated memory.
  */
 ndarray<dtype>::~ndarray(){
     delete [] shape;
@@ -209,9 +219,9 @@ template <typename dtype>
 /**
  * @brief ndarray<dtype>::print print the matrix
  *
- * For 1D array, print horizontally
- * For 2D array, printed as an matrix
- * For nD array(n>2), printed all indices and corresponding values.
+ * + 1D array, printed horizontally
+ * + 2D array, printed as an matrix
+ * + 3+D array, printed all indices and corresponding values.
  */
 void ndarray<dtype>::print(){
     int i,j;
