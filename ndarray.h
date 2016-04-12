@@ -8,21 +8,17 @@
 template <typename dtype>
 /**
  * @brief The n-Dimensional array template class
- *
- * Defined the operations of a ndarray.
  */
 class ndarray{
 public:
-    ///@brief dimension of the array
+    ///dimension of the array
     int dim;
-    ///@brief shape of each dimension
+    ///shape of each dimension
     int *shape;
-    ///@brief head of the array data
+    ///head of the array data
     dtype *head;
     /**
-     * @brief ndarray<dtype>::ndarray()
-     *
-     * Naive initialization by setting all data to zero without allocating memory
+     * @brief Initialization by setting all data to zero without allocating memory
      */
     ndarray():dim(0),shape(NULL),head(NULL),stride(NULL){}
     ndarray(int d, int width);
@@ -38,8 +34,9 @@ public:
     inline dtype & operator[](int rawind);
     dtype & operator()(int *coo);
     dtype & operator()(int co0,...);
+    void homogenize(ndarray<dtype> &a, dtype initval);
 private:
-    ///@brief stride of every axis
+    ///stride of every axis
     int *stride;
     inline int overflow(int index, int bound, bool positive);
 };
@@ -47,7 +44,7 @@ private:
 ///Indexing elements
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::operator []
+ * @brief Indexing by raw index
  * @param offset    the raw index of the data
  * @return the element
  */
@@ -56,11 +53,9 @@ inline dtype & ndarray<dtype>::operator[](int offset){
 }
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::operator ()
+ * @brief Indexing by an index array
  * @param coo,... the coordinates of an element
  * @return The indexed element
- *
- * Indexing by an index array
  */
 dtype & ndarray<dtype>::operator()(int *coo){
     int offset=0;
@@ -71,11 +66,9 @@ dtype & ndarray<dtype>::operator()(int *coo){
 }
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::operator ()
+ * @brief Indexing by the argument list of operator()
  * @param co0,... the index of an element
  * @return The indexed element
- *
- * Indexing by argument list
  */
 dtype & ndarray<dtype>::operator()(int co0, ...){
     va_list l;
@@ -90,11 +83,9 @@ dtype & ndarray<dtype>::operator()(int co0, ...){
 
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::set
+ * @brief Set memory for an a square matrix
  * @param d     dimension
  * @param w     width
- *
- * Set memory for an a square matrix
  */
 void ndarray<dtype>::set(int d, int w){
     dim=d;
@@ -109,11 +100,9 @@ void ndarray<dtype>::set(int d, int w){
 }
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::set
+ * @brief Set memory for an ndarray with a shape given by pointer/array
  * @param d     dimension
  * @param sh    shape array
- *
- * Set memory for an ndarray with a shape given by pointer/array
  */
 void ndarray<dtype>::set(int d, int *sh){
     dim=d;
@@ -129,10 +118,8 @@ void ndarray<dtype>::set(int d, int *sh){
 
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::ndarray
+ * @brief Initialize an ndarray with a shape given by an initializer list
  * @param l     initializer list for shape
- *
- * A ndarray with a shape given by an initializer list
  */
 ndarray<dtype>::ndarray(std::initializer_list<int> l):dim(l.size()){
     shape=new int[dim];
@@ -146,22 +133,18 @@ ndarray<dtype>::ndarray(std::initializer_list<int> l):dim(l.size()){
 }
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::ndarray
+ * @brief Initialize an ndarray for a square matrix
  * @param d     dimension
  * @param w     width
- *
- * A square matrix
  */
 ndarray<dtype>::ndarray(int d, int w){
     set(d, w);
 }
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::ndarray
+ * @brief A ndarray with a shape given by pointer/array
  * @param d     dimension
  * @param sh    shape array
- *
- * A ndarray with a shape given by pointer/array
  */
 ndarray<dtype>::ndarray(int d, int *sh){
     set(d, sh);
@@ -169,9 +152,7 @@ ndarray<dtype>::ndarray(int d, int *sh){
 
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::~ndarray
- *
- * Free all allocated memory.
+ * @brief Free all allocated memory.
  */
 ndarray<dtype>::~ndarray(){
     delete [] shape;
@@ -181,7 +162,6 @@ ndarray<dtype>::~ndarray(){
 
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::size
  * @return The size of data
  */
 inline int ndarray<dtype>::size(){
@@ -196,7 +176,14 @@ inline int ndarray<dtype>::overflow(int index, int bound, bool positive){
         return 1;
     return 0;
 }
+
 template <typename dtype>
+/**
+ * @brief Roll the index in a given axis with periodical boundary condition
+ * @param rawind raw index
+ * @param axis
+ * @return Raw index after rolling
+ */
 int ndarray<dtype>::rollindex(int rawind, int axis){//copy of rollval
     int axisind;
     bool pn;
@@ -211,13 +198,19 @@ int ndarray<dtype>::rollindex(int rawind, int axis){//copy of rollval
     return rawind;//Compare new raw index will indicate overflow or not
 }
 template <typename dtype>
+/**
+ * @brief Roll the index in a given axis with periodical boundary condition
+ * @param rawind raw index
+ * @param axis
+ * @return Corresponding value after roll
+ */
 dtype ndarray<dtype>::rollval(int rawind, int axis){
     return head[rollindex(rawind,axis)];
 }
 
 template <typename dtype>
 /**
- * @brief ndarray<dtype>::print print the matrix
+ * @brief print the matrix/ndarray
  *
  * + 1D array, printed horizontally
  * + 2D array, printed as an matrix
@@ -269,13 +262,13 @@ void ndarray<dtype>::print(){
     }
 }
 
-template <typename T>
+template <typename dtype>
 /**
- * @brief homogenize    set all the values in the array to a init value
+ * @brief set all the values in the array to a init value
  * @param a         array
  * @param initval   initial value
  */
-void homogenize(ndarray<T> &a, T initval=0){
+void ndarray<dtype>::homogenize(ndarray<dtype> &a, dtype initval=0){
     for(int i=0;i<a.size();i++)
         a[i]=initval;
     return;
