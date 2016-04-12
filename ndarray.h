@@ -5,6 +5,12 @@
 #include <cstdarg>
 #include <initializer_list>
 
+/**
+ * @file ndarray.h
+ * @author zpj
+ * @brief The n-Dimensional array template
+ * @bug No
+ */
 template <typename dtype>
 /**
  * @brief The n-Dimensional array template class
@@ -34,7 +40,7 @@ public:
     inline dtype & operator[](int rawind);
     dtype & operator()(int *coo);
     dtype & operator()(int co0,...);
-    void homogenize(ndarray<dtype> &a, dtype initval);
+    void homogenize(dtype initval);
 private:
     ///stride of every axis
     int *stride;
@@ -268,9 +274,9 @@ template <typename dtype>
  * @param a         array
  * @param initval   initial value
  */
-void ndarray<dtype>::homogenize(ndarray<dtype> &a, dtype initval=0){
-    for(int i=0;i<a.size();i++)
-        a[i]=initval;
+void ndarray<dtype>::homogenize(dtype initval){
+    for(int i=0;i<size();i++)
+        head[i]=initval;
     return;
 }
 
