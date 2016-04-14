@@ -1,10 +1,9 @@
 #ifndef NDARRAY_H
 #define NDARRAY_H
-#include <cstdio>
 #include <iostream>
 #include <cstdarg>
 #include <initializer_list>
-
+using namespace std;
 /**
  * @file ndarray.h
  * @author zpj
@@ -17,15 +16,10 @@ template <typename dtype>
  */
 class ndarray{
 public:
-    ///dimension of the array
-    int dim;
-    ///shape of each dimension
-    int *shape;
-    ///head of the array data
-    dtype *head;
-    /**
-     * @brief Initialization by setting all data to zero without allocating memory
-     */
+    int dim;            ///< dimension of the array
+    int *shape;         ///< shape of each dimension
+    dtype *head;        ///< head of the array data
+    /// Initialization by setting all data to zero without allocating memory
     ndarray():dim(0),shape(NULL),head(NULL),stride(NULL){}
     ndarray(int d, int width);
     ndarray(int d, int *sh);
@@ -42,12 +36,10 @@ public:
     dtype & operator()(int co0,...);
     void homogenize(dtype initval);
 private:
-    ///stride of every axis
-    int *stride;
+    int *stride;        ///< stride of every axis
     inline int overflow(int index, int bound, bool positive);
 };
 
-///Indexing elements
 template <typename dtype>
 /**
  * @brief Indexing by raw index
@@ -190,7 +182,7 @@ template <typename dtype>
  * @param axis
  * @return Raw index after rolling
  */
-int ndarray<dtype>::rollindex(int rawind, int axis){//copy of rollval
+int ndarray<dtype>::rollindex(int rawind, int axis){
     int axisind;
     bool pn;
     if(axis<0){
@@ -201,7 +193,7 @@ int ndarray<dtype>::rollindex(int rawind, int axis){//copy of rollval
     axisind=(rawind%stride[axis])/stride[axis+1];
     rawind+=pn*stride[axis+1];
     rawind-=overflow(axisind, shape[axis], pn)*stride[axis];
-    return rawind;//Compare new raw index will indicate overflow or not
+    return rawind;
 }
 template <typename dtype>
 /**
@@ -226,44 +218,44 @@ void ndarray<dtype>::print(){
     int i,j;
     int ind[dim+1]={0};
     if(dim==0){
-        printf("NO ARRAY!\n");
+        cout<<"NO ARRAY!"<<endl;
     }
     else if (dim==1){
-        printf("1D array:\n");
+        cout<<"1D array:"<<endl;
         for(i=0;i<stride[0];i++)
-            printf("%3d",head[i]);
-        putchar('\n');
+            cout<<head[i]<<'\t';
+        cout<<endl;
         return;
     }
     else if(dim==2){
         for(i=0;i<shape[0];i++){
             for (j=0;j<shape[1];j++){
-                printf("%3d",head[i*stride[1]+j]);
+                cout<<head[i*stride[1]+j]<<'\t';
             }
-            putchar('\n');
+            cout<<endl;
         }
         return;
     }
-    printf("Dimension:%d\tSize:%d\n",dim,stride[0]);
-    printf("Stride\t");
+    cout<<"Dimension:"<<dim<<'\t'<<"Size:"<<stride[0]<<'\n';
+    cout<<"Stride\t";
     for(i=0;i<dim;i++)
-        printf("%d\t",stride[i+1]);
-    printf("\nShape\t");
+        cout<<stride[i+1]<<'\t';
+    cout<<"\nShape\t";
     for(i=0;i<dim;i++)
-        printf("%d\t",shape[i]);
-    printf("\nRaw\t");
+        cout<<shape[i]<<"\t";
+    cout<<"\nRaw\t";
     for(i=0;i<dim;i++)
-        printf("Axis %d\t",i);
-    printf("Value\n");
+        cout<<"Axis "<<i<<"\t";
+    cout<<"Value\n";
     for(i=0;i<stride[0];i++){
-        printf("%d\t",i);
+        cout<<i<<"\t";
         for(j=dim-1;ind[j+1]==shape[j];j--){
             ind[j+1]=0;
             ind[j]+=1;
         }
         for(j=0;j<dim;j++)
-            printf("%d\t",ind[j+1]);
-        printf("%d\n",head[i]);
+            cout<<ind[j+1]<<"\t";
+        cout<<head[i]<<endl;
         ind[dim]+=1;
     }
 }
@@ -271,7 +263,6 @@ void ndarray<dtype>::print(){
 template <typename dtype>
 /**
  * @brief set all the values in the array to a init value
- * @param a         array
  * @param initval   initial value
  */
 void ndarray<dtype>::homogenize(dtype initval){
@@ -279,5 +270,6 @@ void ndarray<dtype>::homogenize(dtype initval){
         head[i]=initval;
     return;
 }
+
 
 #endif //NDARRAY_H
