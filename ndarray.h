@@ -20,16 +20,16 @@ private:
 public:
     dtype *head;        ///< head of the array data
 
-    //Constructors and Assignments
+    /// Naive Constructor setting size to 0
     ndarray():dim(0),shape(nullptr),stride(&dim),head(nullptr){}
     ndarray(int d, int width);
     ndarray(int d, int *sh);
-    ndarray(initializer_list<int> l);
+    ndarray(initializer_list<int>);
     ndarray(const ndarray<dtype>&);
-    ndarray(ndarray<dtype> && x);
+    ndarray(ndarray<dtype> &&);
     ~ndarray<dtype>();
     ndarray<dtype> & operator=(const ndarray<dtype> &);
-    ndarray<dtype> & operator=(ndarray<dtype> && x);
+    ndarray<dtype> & operator=(ndarray<dtype> &&);
     ndarray<dtype> & operator=(dtype val);
 
     //Read private data
@@ -249,10 +249,18 @@ dtype & ndarray<dtype>:: operator ()(int co0, ...){
     return head[offset];
 }
 template <typename dtype>
-inline int ndarray<dtype>::overflow(int index, int bound, bool positive){
-    if((!positive)&&(index==0))
+/**
+ * @brief Judge if overflow for a index self-increment/decrement by 1
+ * @param index
+ * @param bound
+ * @param incre
+ * + true increment
+ * + false decrement
+ */
+inline int ndarray<dtype>::overflow(int index, int bound, bool incre){
+    if((!incre)&&(index==0))
         return -1;
-    else if(positive && (index==(bound-1)))
+    else if(incre && (index==(bound-1)))
         return 1;
     return 0;
 }
