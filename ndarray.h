@@ -3,20 +3,29 @@
 #include <iostream>
 #include <cstdarg>
 #include <initializer_list>
+#include "nditer.h"
 using namespace std;
 /**
  * @file ndarray.h
  * @author zpj
  * @brief The n-Dimensional array template
- * @bug No
+ * @todo
+ * + broadcasting?
+ * + `print()` --> `<<`
+ * + Math operations
  */
 template <typename dtype>
-/// The n-Dimensional array template class
+/// The n-Dimensional C-style array template class
 class ndarray{
 private:
     int dim;            ///< dimension of the array
     int *shape;         ///< shape of each dimension
-    int *stride;        ///< stride of every axis
+    /**
+     * @brief stride of every axis.
+     *
+     * For transposition, the naive stride of last index is reserved.
+     */
+    int *stride;
 public:
     dtype *head;        ///< head of the array data
 
@@ -28,37 +37,35 @@ public:
     ndarray(const ndarray<dtype>&);
     ndarray(ndarray<dtype> &&);
     ~ndarray<dtype>();
+
     ndarray<dtype> & operator=(const ndarray<dtype> &);
     ndarray<dtype> & operator=(ndarray<dtype> &&);
     ndarray<dtype> & operator=(dtype val);
 
-    //Read private data
     int size() {return stride[0];}      ///< The size of data as an mask of stride[0]
     int _shape(int i){return shape[i];}    ///< Get shape
     int _dim(){return dim;}                ///< Get dimension
     int _stride(int i){return stride[i+1];}///< Get stride
 
-    //Indexing Data
     inline dtype & operator [](int rawind);
     dtype & operator ()(int *coo);
     dtype & operator ()(int co0,...);
-    int rollindex(int rawind, int axis);
-    //dtype rollval(int rawind, int axis);
-    //Other
+
     void print();
-private:
-    inline int overflow(int index, int bound, bool positive);
+    int rollindex(int rawind, int axis);
+    /// Transpose between two axis
+    void transpose(int i=1, int j=0){
+        if(i==j) return;
+        int tmp;
+        tmp=stride[i+1];
+        stride[i+1]=stride[j+1];
+        stride[j+1]=tmp;
+        tmp=shape[i];
+        shape[i]=shape[j];
+        shape[j]=tmp;
+    }
 };
 //Constructor
-//template <typename dtype>
-///**
-// * @brief Default constructor
-// */
-//ndarray<dtype>::ndarray():
-//    dim(0),shape(nullptr),head(nullptr),stride(new int[1])
-//{
-//    stride=&dim;
-//}
 template <typename dtype>
 /**
  * @brief Initialize an ndarray for a square matrix
@@ -248,22 +255,6 @@ dtype & ndarray<dtype>:: operator ()(int co0, ...){
     va_end(l);
     return head[offset];
 }
-template <typename dtype>
-/**
- * @brief Judge if overflow for a index self-increment/decrement by 1
- * @param index
- * @param bound
- * @param incre
- * + true increment
- * + false decrement
- */
-inline int ndarray<dtype>::overflow(int index, int bound, bool incre){
-    if((!incre)&&(index==0))
-        return -1;
-    else if(incre && (index==(bound-1)))
-        return 1;
-    return 0;
-}
 
 template <typename dtype>
 /**
@@ -273,29 +264,21 @@ template <typename dtype>
  * @return Raw index after rolling
  */
 int ndarray<dtype>::rollindex(int rawind, int axis){
-    int axisind;
-    bool pn;
+    int axisind=(rawind%stride[axis])/stride[axis+1];
     if(axis<0){
-        pn=false;
-        axis=-1-axis;
+        axis+=dim;
+        if(axisind==0)
+            rawind+=stride[axis];
+        rawind-=stride[axis+1];
     }
-    else pn=true;
-    axisind=(rawind%stride[axis])/stride[axis+1];
-    rawind+=pn*stride[axis+1];
-    rawind-=overflow(axisind, shape[axis], pn)*stride[axis];
+    else{
+        if(axisind+1==shape[axis])
+            rawind-=stride[axis];
+        rawind+=stride[axis+1];
+    }
     return rawind;
 }
-//template <typename dtype>
-/* *Deprecated*
- * @brief Roll the index in a given axis with periodical boundary condition
- * @param rawind raw index
- * @param axis
- * @return Corresponding value after roll
- */
-//dtype ndarray<dtype>::rollval(int rawind, int axis){
-//    return head[rollindex(rawind,axis)];
-//}
-//Other
+
 template <typename dtype>
 /**
  * @brief print the matrix/ndarray
@@ -320,7 +303,7 @@ void ndarray<dtype>::print(){
     else if(dim==2){
         for(i=0;i<shape[0];i++){
             for (j=0;j<shape[1];j++){
-                cout<<head[i*stride[1]+j]<<'\t';
+                cout<<head[i*stride[1]+j*stride[2]]<<'\t';
             }
             cout<<endl;
         }
@@ -355,7 +338,7 @@ template <typename dtype>
  * @param val   initial value
  */
 ndarray<dtype>& ndarray<dtype>:: operator= (dtype val){
-    for(int i=0;i<size();i++)
+    for(int i=0;i<stride[0];i++)
         head[i]=val;
     return *this;
 }
