@@ -17,43 +17,43 @@ template <typename dtype>
 /// The n-Dimensional C-style array template class
 class ndarray{
 private:
-    int dim;            ///< dimension of the array
-    int *shape;         ///< shape of each dimension
+    int _dim;            ///< dimension of the array
+    int *_shape;         ///< shape of each dimension
     /**
      * @brief stride of every axis.
      *
      * For the purpose of transposition, the naive stride of last index is reserved.
      * So the last stride may be non-zero. Be cautious!
      */
-    int *stride;
+    int *_stride;
 public:
     dtype *head;        ///< head of the array data
     /// Clear Memory
     void clear(){
-        if(dim){
-            delete [] shape;
-            delete [] stride;
+        if(_dim){
+            delete [] _shape;
+            delete [] _stride;
             delete [] head;
-            stride=&dim;
+            _stride=&_dim;
         }
     }
     ~ndarray<dtype>(){clear();}
 
     /// Naive Constructor setting size to 0
-    ndarray():dim(0),shape(nullptr),stride(&dim),head(nullptr){}
+    ndarray():_dim(0),_shape(nullptr),_stride(&_dim),head(nullptr){}
     /**
      * @brief Initialize an ndarray for a square matrix
      * @param d     dimension
      * @param w     width
      */
     ndarray(int d, int w):
-        dim(d),shape(new int[d]),stride(new int[d+1]){
-        stride[d]=1;
+        _dim(d),_shape(new int[d]),_stride(new int[d+1]){
+        _stride[d]=1;
         for(int i=0;i<d;i++){
-            shape[i]=w;
-            stride[d-i-1]=stride[d-i]*w;
+            _shape[i]=w;
+            _stride[d-i-1]=_stride[d-i]*w;
         }
-        head=new dtype[*stride];
+        head=new dtype[*_stride];
     }
     /**
      * @brief A ndarray with a shape given by pointer/array
@@ -63,13 +63,13 @@ public:
      * For dynamic construction
      */
     ndarray(int d, int *sh):
-        dim(d),shape(new int[d]),stride(new int[d+1]){
-        stride[d]=1;
+        _dim(d),_shape(new int[d]),_stride(new int[d+1]){
+        _stride[d]=1;
         for(int i=0;i<d;i++){
-            shape[i]=sh[i];
-            stride[d-i-1]=stride[d-i]*sh[d-i-1];
+            _shape[i]=sh[i];
+            _stride[d-i-1]=_stride[d-i]*sh[d-i-1];
         }
-        head=new dtype[*stride];
+        head=new dtype[*_stride];
     }
     /**
      * @brief Initialize an ndarray with a shape given by an initializer list
@@ -77,15 +77,15 @@ public:
      *
      * For static construction
      */
-    ndarray(initializer_list<int> l):dim(l.size()){
-        shape=new int[dim];
-        copy(begin(l), end(l), shape);
-        stride=new int[dim+1];
-        stride[dim]=1;
-        for(int i=0;i<dim;i++){
-            stride[dim-i-1]=stride[dim-i]*shape[dim-i-1];
+    ndarray(initializer_list<int> l):_dim(l.size()){
+        _shape=new int[_dim];
+        copy(begin(l), end(l), _shape);
+        _stride=new int[_dim+1];
+        _stride[_dim]=1;
+        for(int i=0;i<_dim;i++){
+            _stride[_dim-i-1]=_stride[_dim-i]*_shape[_dim-i-1];
         }
-        head=new dtype[*stride];
+        head=new dtype[*_stride];
     }
 
     /**
@@ -102,31 +102,32 @@ public:
      * ```
      */
     ndarray(const ndarray<dtype> & x):
-        dim(x.dim),shape(new int[x.dim]),\
-        stride(new int[x.dim+1]),\
-        head(new dtype[*(x.stride)])
+        _dim(x._dim),_shape(new int[x._dim]),\
+        _stride(new int[x._dim+1]),\
+        head(new dtype[*(x._stride)])
     {
-        for(int i=0;i<dim;i++){
-            shape[i]=x.shape[i];
-            stride[i]=x.stride[i];
+        for(int i=0;i<_dim;i++){
+            _shape[i]=x._shape[i];
+            _stride[i]=x._stride[i];
         }
-        stride[dim]=x.stride[dim];
+        _stride[_dim]=x._stride[_dim];
     }
     /// Move constructor
     ndarray(ndarray<dtype> && x):
-        dim(x.dim),shape(x.shape),head(x.head),stride(x.stride){
-        x.shape=nullptr;
+        _dim(x._dim),_shape(x._shape),head(x.head),_stride(x._stride){
+        x._shape=nullptr;
         x.head=nullptr;
-        x.stride=nullptr;
+        x._stride=nullptr;
     }
     /**
      * @brief Copy Assignment copying all data
      * @param x     The source of ndarray
      * @todo 形状相同但是权重不同时候的复制，可能需要用到nditer辅助？进行Shape匹配的复制？
      *
-     * + 复制空数列等于清空被赋值的数列。
-     * + 不能进行size大小不同的复制导致重新分配内存的做法，除非复制到空数列。
-     * + 间接方法是先clear再赋值复制。
+     * + 复制空数列等于clear()被赋值的数列。
+     * + 复制到空数列等于深度赋值复制。
+     * + 都非空且size大小不同的情况下，需要重新分配内存，视为错误。
+     * + 间接方法是先clear()再赋值复制。
      * + size相同的时候按照裸指标赋值，无论stride是否相同。
      *
      * ```
@@ -135,16 +136,16 @@ public:
      * d=c;    // Copy the whole data of c
      * ```
      */
-    ndarray<dtype> &  operator= (const ndarray<dtype>& x){
-        if(*(x.stride)==0){         // Implicitly Clear the array
+    ndarray<dtype> & operator= (const ndarray<dtype>& x){
+        if(*(x._stride)==0){
             clear();
             return *this;
         }
-        if(*stride==0){           // After copying, the shape become equal
+        if(*_stride==0){
             *this=ndarray<dtype>(x);
         }
-        if(*stride==*(x.stride)){
-            for(int i=0;i<*stride;i++){
+        if(*_stride==*(x._stride)){
+            for(int i=0;i<*_stride;i++){
                 head[i]=x.head[i];
             }
         }
@@ -155,63 +156,98 @@ public:
         return *this;
     }
     /// Move assignment
-    ndarray<dtype> &  operator= (ndarray<dtype>&& x){
-        dim=x.dim;
-        shape=x.shape;
+    ndarray<dtype> & operator= (ndarray<dtype>&& x){
+        _dim=x._dim;
+        _shape=x._shape;
         head=x.head;
-        stride=x.stride;
-        x.shape=nullptr;
+        _stride=x._stride;
+        x._shape=nullptr;
         x.head=nullptr;
-        x.stride=nullptr;
+        x._stride=nullptr;
         return *this;
     }
     /**
      * @brief Set all the values in the array to a init value
      * @param val   initial value
      */
-    ndarray<dtype>&  operator= (dtype val){
-        for(int i=0;i<*stride;i++)
+    ndarray<dtype> & operator= (dtype val){
+        for(int i=0;i<*_stride;i++)
             head[i]=val;
         return *this;
     }
 
-    int size() {return *stride;}      ///< The size of data as an mask of stride[0]
-    int _shape(int i){return shape[i];}    ///< Get shape
-    int _dim(){return dim;}                ///< Get dimension
-    int _stride(int i){return stride[i+1];}///< Get stride
+    int size() {return *_stride;}
+    int shape(int i){return _shape[i];}
+    int dim(){return _dim;}
+    int stride(int i){return _stride[i+1];}
 
-    dtype & operator[](int rawind){return *(head+rawind);}/// Naive indexing
+    /**
+     * @brief Naive indexing using raw index
+     * @param rawind    raw index
+     *
+     * + Good efficiency!
+     * + If dim==1, use [] rather than ()
+     */
+    dtype & operator[] (int rawind){return *(head+rawind);}
+
+    template<int N>
+    /**
+     * @brief dot product for small N
+     * @param coo   the coordinates of an element
+     * @return
+     */
+    int dot(int *coo){
+        int offset=0;
+        for(int i=0;i<N;i++){
+            offset+=coo[i]*_stride[i+1];
+        }
+        return offset;
+    }
     /**
      * @brief Indexing by an index array
-     * @param coo,... the coordinates of an element
+     * @param coo   the coordinates of an element
      *
-     * Especially useful for array with known dimension.
+     * + Especially useful for array with unknown dimension.
+     * + The speed is about 0.6+ that of operator ()(Args... args)
+     * + If _dim==1, use [] directly rather than ()
+     *
      * @return The indexed element
      */
     dtype & operator()(int *coo){
+        if(_dim==2) return head[dot<2>(coo)];
+        if(_dim==3) return head[dot<3>(coo)];
+        if(_dim==4) return head[dot<4>(coo)];
+        if(_dim==5) return head[dot<5>(coo)];
         int offset=0;
-        for(int i=0;i<dim;i++){
-            offset+=stride[i+1]*coo[i];
+        for(int i=0;i<_dim;i++){
+            offset+=coo[i]*_stride[i+1];
         }
         return head[offset];
     }
+
+    int adder(int *p,int last){
+      return *p*last;
+    }
+
+    template<typename... Args>
+    int adder(int *p, int first, Args... args) {
+      return *p*first+adder(p+1, args...);
+    }
+
     /**
      * @brief Indexing by the argument list of operator()
-     * @param co0,... the index of an element
+     * @param args the index of an element
      *
-     * Very useful for array with known dimension. Emulate
-     * the original C style array
+     * + Very useful for array with known dimension.
+     * + Emulate the original C style array
+     * + If _dim==1, use [] directly rather than ()
+     * + If args are not enough, suppose we fill it with 0
+     *
      * @return The indexed element
      */
-    dtype & operator ()(int co0, ...){
-        va_list l;
-        va_start(l, co0);
-        int offset=co0*stride[1];
-        for(int i=1;i<dim;i++){
-            offset+=stride[i+1]*va_arg(l,int);
-        }
-        va_end(l);
-        return head[offset];
+    template<typename... Args>
+    dtype & operator ()(Args... args){
+        return *(head+adder(_stride+1, args...));
     }
 
     /**
@@ -221,17 +257,17 @@ public:
      * @return Raw index after rolling
      */
     int rollindex(int rawind, int axis){
-        int axisind=(rawind%stride[axis])/stride[axis+1];
+        int axisind=(rawind%_stride[axis])/_stride[axis+1];
         if(axis<0){
-            axis+=dim;
+            axis+=_dim;
             if(axisind==0)
-                rawind+=stride[axis];
-            rawind-=stride[axis+1];
+                rawind+=_stride[axis];
+            rawind-=_stride[axis+1];
         }
         else{
-            if(axisind+1==shape[axis])
-                rawind-=stride[axis];
-            rawind+=stride[axis+1];
+            if(axisind+1==_shape[axis])
+                rawind-=_stride[axis];
+            rawind+=_stride[axis+1];
         }
         return rawind;
     }
@@ -239,12 +275,12 @@ public:
     void transpose(int i=1, int j=0){
         if(i==j) return;
         int tmp;
-        tmp=stride[i+1];
-        stride[i+1]=stride[j+1];
-        stride[j+1]=tmp;
-        tmp=shape[i];
-        shape[i]=shape[j];
-        shape[j]=tmp;
+        tmp=_stride[i+1];
+        _stride[i+1]=_stride[j+1];
+        _stride[j+1]=tmp;
+        tmp=_shape[i];
+        _shape[i]=_shape[j];
+        _shape[j]=tmp;
     }
     /**
      * @brief print the matrix/ndarray
@@ -255,47 +291,47 @@ public:
      */
     void print(){
         int i,j;
-        int ind[dim+1]={0};
-        if(dim==0){
+        int ind[_dim+1]={0};
+        if(_dim==0){
             cout<<"NO ARRAY!"<<endl;
         }
-        else if (dim==1){
+        else if (_dim==1){
             cout<<"1D array:"<<endl;
-            for(i=0;i<*stride;i++)
+            for(i=0;i<*_stride;i++)
                 cout<<head[i]<<'\t';
             cout<<endl;
             return;
         }
-        else if(dim==2){
-            for(i=0;i<shape[0];i++){
-                for (j=0;j<shape[1];j++){
-                    cout<<head[i*stride[1]+j*stride[2]]<<'\t';
+        else if(_dim==2){
+            for(i=0;i<_shape[0];i++){
+                for (j=0;j<_shape[1];j++){
+                    cout<<head[i*_stride[1]+j*_stride[2]]<<'\t';
                 }
                 cout<<endl;
             }
             return;
         }
-        cout<<"Dimension:"<<dim<<'\t'<<"Size:"<<*stride<<'\n';
+        cout<<"Dimension:"<<_dim<<'\t'<<"Size:"<<*_stride<<'\n';
         cout<<"Stride\t";
-        for(i=0;i<dim;i++)
-            cout<<stride[i+1]<<'\t';
+        for(i=0;i<_dim;i++)
+            cout<<_stride[i+1]<<'\t';
         cout<<"\nShape\t";
-        for(i=0;i<dim;i++)
-            cout<<shape[i]<<"\t";
+        for(i=0;i<_dim;i++)
+            cout<<_shape[i]<<"\t";
         cout<<"\nRaw\t";
-        for(i=0;i<dim;i++)
+        for(i=0;i<_dim;i++)
             cout<<"Axis "<<i<<"\t";
         cout<<"Value\n";
-        for(i=0;i<*stride;i++){
+        for(i=0;i<*_stride;i++){
             cout<<i<<"\t";
-            for(j=dim-1;ind[j+1]==shape[j];j--){
+            for(j=_dim-1;ind[j+1]==_shape[j];j--){
                 ind[j+1]=0;
                 ind[j]+=1;
             }
-            for(j=0;j<dim;j++)
+            for(j=0;j<_dim;j++)
                 cout<<ind[j+1]<<"\t";
             cout<<head[i]<<endl;
-            ind[dim]+=1;
+            ind[_dim]+=1;
         }
     }
 };
