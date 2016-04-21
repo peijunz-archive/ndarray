@@ -290,65 +290,68 @@ public:
         _shape[i]=_shape[j];
         _shape[j]=tmp;
     }
-    void printvec(dtype *start){
-        for(int i=0;i<_shape[_dim-1];i++)
-            cout<<*(start+i*_stride[_dim])<<'\t';
+};
+template<typename T>
+void printvec(ostream &out, ndarray<T> &x, const T *start){
+    for(int i=0;i<x.shape(x.dim()-1);i++)
+        out<<*(start+i*x.stride(x.dim()-1))<<'\t';
+    out<<"\n";
+}
+template<typename T>
+void printmat(ostream &out, ndarray<T> &x, const T *start){
+    out<<"\t ";
+    for(int i=0;i<x.shape(x.dim()-1);i++) out<<i<<'\t';
+    out<<"\n\t|----------------------------------\n";
+    for(int i=0;i<x.shape(x.dim()-2);i++){
+        out<<i<<"\t|";
+        printvec(out, x, start+i*x.stride(x.dim()-2));
+    }
+    out<<'\n';
+}
+
+template<typename T>
+/**
+ * @brief Print the matrix/ndarray
+ *
+ * + 1 D array, printed horizontally
+ * + 2 D array, printed as an matrix
+ * + 3+D array, printed as Many Matrics.
+ */
+ostream & operator<<(ostream &out, ndarray<T> &x){
+    if(x.dim()==0){
+        cerr<<"Error: print an empty array"<<endl;
+        return out;
+    }
+    else if(x.dim()==1){
+        cout<<"Size:"<<x.size()<<"\t|";
+        printvec(out, x, x.head);
+    }
+    else{
+        cout<<"Dimension:"<<x.dim()<<'\t';
+        cout<<"\nShape\t ";
+        for(int i=0;i<x.dim();i++)
+            cout<<x.shape(i)<<"\t";
         cout<<"\n";
-    }
-    void printmat(dtype *start){
-        cout<<"\t ";
-        for(int i=0;i<_shape[_dim-1];i++) cout<<i<<'\t';
-        cout<<"\n\t|----------------------------------\n";
-        for(int i=0;i<_shape[_dim-2];i++){
-            cout<<i<<"\t|";
-            printvec(start+i*_stride[_dim-1]);
-        }
-        cout<<'\n';
-    }
-    /**
-     * @brief print the matrix/ndarray
-     *
-     * + 1D array, printed horizontally
-     * + 2D array, printed as an matrix
-     * + 3+D array, printed all indices and corresponding values.
-     */
-    void print(){
-        if(_dim==0){
-            cerr<<"Error: print an empty array"<<endl;
-            return;
-        }
-        else if(_dim==1){
-            cout<<"Size:"<<*_stride<<"\t|";
-            printvec(head);
+        if(x.dim()==2){
+            printmat(out, x, x.head);
         }
         else{
-            cout<<"Dimension:"<<_dim<<'\t';
-            cout<<"\nShape\t ";
-            for(int i=0;i<_dim;i++)
-                cout<<_shape[i]<<"\t";
-            cout<<"\n";
-            if(_dim==2){
-                printmat(head);
-            }
-            else{
-                int ind[_dim-1]={0};
-                int step=_stride[_dim-2], num=(*_stride)/step;
-//                cout<<"num"<<num;
-                for(int i=0;i<num;i++){
-                    for(int j=_dim-3;ind[j+1]==_shape[j];j--){
-                        ind[j+1]=0;
-                        ind[j]+=1;
-                    }
-                    cout<<"Matrix number: (";
-                    for(int j=1;j<_dim-1;j++)
-                        cout<<ind[j]<<", ";
-                    cout<<"\b\b) \n";
-                    printmat(head+i*step);
-                    ind[_dim-2]+=1;
+            int ind[x.dim()-1]={0};
+            int step=x.stride(x.dim()-3), num=x.size()/step;
+            for(int i=0;i<num;i++){
+                for(int j=x.dim()-3;ind[j+1]==x.shape(j);j--){
+                    ind[j+1]=0;
+                    ind[j]+=1;
                 }
+                cout<<"Matrix No. "<<i<<": (";
+                for(int j=1;j<x.dim()-1;j++)
+                    cout<<ind[j]<<", ";
+                cout<<"\b\b) \n";
+                printmat(out, x, x.head+i*step);
+                ind[x.dim()-2]+=1;
             }
         }
     }
-};
-
+    return out;
+}
 #endif //NDARRAY_H
