@@ -10,7 +10,6 @@ using namespace std;
  * @brief The n-Dimensional array template
  * @todo
  * + broadcasting?
- * + `print()` --> `<<`
  * + Math operations
  */
 template <typename dtype>
@@ -22,7 +21,8 @@ private:
     /**
      * @brief stride of every axis.
      *
-     * For the purpose of transposition, the naive stride of last index is reserved.
+     * For the purpose of transposition,
+     * the naive stride of last index is reserved.
      * So the last stride may be non-zero. Be cautious!
      */
     int *_stride;
@@ -91,7 +91,8 @@ public:
     /**
      * @brief Copy constructor copying the shape only.
      * @param x     The source of ndarray
-     * + You can copy the shape at the definition or copy the shape with moving assignment anywhere
+     * + You can copy the shape at the definition or copy the
+     *   shape with moving assignment anywhere
      * + If you want to copy the data, use copy assignment!
      *
      * ```cpp
@@ -122,13 +123,16 @@ public:
     /**
      * @brief Copy Assignment copying all data
      * @param x     The source of ndarray
-     * @todo 形状相同但是权重不同时候的复制，可能需要用到nditer辅助？进行Shape匹配的复制？
+     * @todo If the shape is the same while stride is not,
+     *   how to copy? Using nditer?
      *
-     * + 复制空数列等于clear()被赋值的数列。
-     * + 复制到空数列等于深度赋值复制。
-     * + 都非空且size大小不同的情况下，需要重新分配内存，视为错误。
-     * + 间接方法是先clear()再赋值复制。
-     * + size相同的时候按照裸指标赋值，无论stride是否相同。
+     * + Copy an empty x array will clear() the array
+     * + Copy to an empty array will deep copy the array x
+     * + Except for above conditions, copy between arrays
+     *   of different size is an error
+     * + Indirective method is clear first and then copy
+     * + If size is equal, copy according to raw index,
+     *   regardless of the shape, dim, stride
      *
      * ```
      * ndarray<int> c{3,3}, d;
@@ -137,21 +141,23 @@ public:
      * ```
      */
     ndarray<dtype> & operator= (const ndarray<dtype>& x){
-        if(*(x._stride)==0){
-            clear();
-            return *this;
-        }
-        if(*_stride==0){
-            *this=ndarray<dtype>(x);
-        }
-        if(*_stride==*(x._stride)){
-            for(int i=0;i<*_stride;i++){
-                head[i]=x.head[i];
+        if(this != &x){
+            if(*(x._stride)==0){
+                clear();
+                return *this;
             }
-        }
-        else{
-            cerr<<"Unmatched copy! Please clear() first."<<endl;
-            exit(0);
+            if(*_stride==0){
+                *this=ndarray<dtype>(x);
+            }
+            if(*_stride==*(x._stride)){
+                for(int i=0;i<*_stride;i++){
+                    head[i]=x.head[i];
+                }
+            }
+            else{
+                cerr<<"Unmatched copy! Please clear() first."<<endl;
+                exit(0);
+            }
         }
         return *this;
     }
@@ -176,10 +182,12 @@ public:
         return *this;
     }
 
-    int size() {return *_stride;}
-    int shape(int i){return _shape[i];}
-    int dim(){return _dim;}
-    int stride(int i){return _stride[i+1];}
+    int size() const {return *_stride;}
+    int dim() const {return _dim;}
+    int shape(int i) const {return _shape[i];}
+    const int * shape() const {return _shape;}
+    int stride(int i) const{return _stride[i+1];}
+    const int * stride() const{return _stride+1;}
 
     /**
      * @brief Naive indexing using raw index
@@ -260,14 +268,14 @@ public:
         int axisind=(rawind%_stride[axis])/_stride[axis+1];
         if(axis<0){
             axis+=_dim;
-            if(axisind==0)
-                rawind+=_stride[axis];
             rawind-=_stride[axis+1];
+            if(axisind!=0)
+                rawind+=_stride[axis];
         }
         else{
+            rawind+=_stride[axis+1];
             if(axisind+1==_shape[axis])
                 rawind-=_stride[axis];
-            rawind+=_stride[axis+1];
         }
         return rawind;
     }
@@ -282,6 +290,21 @@ public:
         _shape[i]=_shape[j];
         _shape[j]=tmp;
     }
+    void printvec(dtype *start){
+        for(int i=0;i<_shape[_dim-1];i++)
+            cout<<*(start+i*_stride[_dim])<<'\t';
+        cout<<"\n";
+    }
+    void printmat(dtype *start){
+        cout<<"\t ";
+        for(int i=0;i<_shape[_dim-1];i++) cout<<i<<'\t';
+        cout<<"\n\t|----------------------------------\n";
+        for(int i=0;i<_shape[_dim-2];i++){
+            cout<<i<<"\t|";
+            printvec(start+i*_stride[_dim-1]);
+        }
+        cout<<'\n';
+    }
     /**
      * @brief print the matrix/ndarray
      *
@@ -290,48 +313,40 @@ public:
      * + 3+D array, printed all indices and corresponding values.
      */
     void print(){
-        int i,j;
-        int ind[_dim+1]={0};
         if(_dim==0){
-            cout<<"NO ARRAY!"<<endl;
-        }
-        else if (_dim==1){
-            cout<<"1D array:"<<endl;
-            for(i=0;i<*_stride;i++)
-                cout<<head[i]<<'\t';
-            cout<<endl;
+            cerr<<"Error: print an empty array"<<endl;
             return;
         }
-        else if(_dim==2){
-            for(i=0;i<_shape[0];i++){
-                for (j=0;j<_shape[1];j++){
-                    cout<<head[i*_stride[1]+j*_stride[2]]<<'\t';
+        else if(_dim==1){
+            cout<<"Size:"<<*_stride<<"\t|";
+            printvec(head);
+        }
+        else{
+            cout<<"Dimension:"<<_dim<<'\t';
+            cout<<"\nShape\t ";
+            for(int i=0;i<_dim;i++)
+                cout<<_shape[i]<<"\t";
+            cout<<"\n";
+            if(_dim==2){
+                printmat(head);
+            }
+            else{
+                int ind[_dim-1]={0};
+                int step=_stride[_dim-2], num=(*_stride)/step;
+//                cout<<"num"<<num;
+                for(int i=0;i<num;i++){
+                    for(int j=_dim-3;ind[j+1]==_shape[j];j--){
+                        ind[j+1]=0;
+                        ind[j]+=1;
+                    }
+                    cout<<"Matrix number: (";
+                    for(int j=1;j<_dim-1;j++)
+                        cout<<ind[j]<<", ";
+                    cout<<"\b\b) \n";
+                    printmat(head+i*step);
+                    ind[_dim-2]+=1;
                 }
-                cout<<endl;
             }
-            return;
-        }
-        cout<<"Dimension:"<<_dim<<'\t'<<"Size:"<<*_stride<<'\n';
-        cout<<"Stride\t";
-        for(i=0;i<_dim;i++)
-            cout<<_stride[i+1]<<'\t';
-        cout<<"\nShape\t";
-        for(i=0;i<_dim;i++)
-            cout<<_shape[i]<<"\t";
-        cout<<"\nRaw\t";
-        for(i=0;i<_dim;i++)
-            cout<<"Axis "<<i<<"\t";
-        cout<<"Value\n";
-        for(i=0;i<*_stride;i++){
-            cout<<i<<"\t";
-            for(j=_dim-1;ind[j+1]==_shape[j];j--){
-                ind[j+1]=0;
-                ind[j]+=1;
-            }
-            for(j=0;j<_dim;j++)
-                cout<<ind[j+1]<<"\t";
-            cout<<head[i]<<endl;
-            ind[_dim]+=1;
         }
     }
 };
