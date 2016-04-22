@@ -1,16 +1,17 @@
 #ifndef NDARRAY_H
 #define NDARRAY_H
 #include <iostream>
-#include <cstdarg>
 #include <initializer_list>
 using namespace std;
 /**
  * @file ndarray.h
  * @author zpj
- * @brief The n-Dimensional array template
+ * @brief The n-Dimensional array template for n>1
  * @todo
  * + broadcasting?
  * + Math operations
+ *
+ * Should have a view class for slicing?
  */
 template <typename dtype>
 /// The n-Dimensional C-style array template class
@@ -26,6 +27,19 @@ private:
      * So the last stride may be non-zero. Be cautious!
      */
     int *_stride;
+    void check(){
+        if(_dim<=0){
+            cerr<<"Error: Positive dimension needed!"<<endl;
+            exit(0);
+        }
+        for(int i=0;i<_dim;i++){
+            if(_shape[i]<=0){
+                cerr<<"Error: Positive shape needed!"<<endl;
+                exit(0);
+            }
+        }
+    }
+
 public:
     dtype *head;        ///< head of the array data
     /// Clear Memory
@@ -37,7 +51,7 @@ public:
             _stride=&_dim;
         }
     }
-    ~ndarray<dtype>(){clear();}
+    ~ndarray(){clear();}
 
     /// Naive Constructor setting size to 0
     ndarray():_dim(0),_shape(nullptr),_stride(&_dim),head(nullptr){}
@@ -53,6 +67,7 @@ public:
             _shape[i]=w;
             _stride[d-i-1]=_stride[d-i]*w;
         }
+        check();
         head=new dtype[*_stride];
     }
     /**
@@ -69,6 +84,7 @@ public:
             _shape[i]=sh[i];
             _stride[d-i-1]=_stride[d-i]*sh[d-i-1];
         }
+        check();
         head=new dtype[*_stride];
     }
     /**
@@ -85,6 +101,7 @@ public:
         for(int i=0;i<_dim;i++){
             _stride[_dim-i-1]=_stride[_dim-i]*_shape[_dim-i-1];
         }
+        check();
         head=new dtype[*_stride];
     }
 
@@ -255,7 +272,7 @@ public:
      * @return The indexed element
      */
     template<typename... Args>
-    dtype & operator ()(Args... args){
+    dtype & operator()(Args... args){
         return *(head+adder(_stride+1, args...));
     }
 
@@ -292,6 +309,13 @@ public:
         tmp=_shape[i];
         _shape[i]=_shape[j];
         _shape[j]=tmp;
+    }
+    int size_attached(){
+        int s=sizeof(ndarray<dtype>);
+        if(_dim){
+            s+=sizeof(int)*(2*_dim+1);
+        }
+        return s;
     }
 };
 template<typename T>
