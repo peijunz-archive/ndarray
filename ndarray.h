@@ -102,7 +102,8 @@ public:
      * c=ndarray<int>(a)    // c get the shape of a
      * ```
      */
-    ndarray(const ndarray<dtype> & x):
+    template<typename T>
+    ndarray(const ndarray<T> & x):
         _dim(x._dim),_shape(new int[x._dim]),\
         _stride(new int[x._dim+1]),\
         head(new dtype[*(x._stride)])
@@ -262,6 +263,8 @@ public:
      * @brief Roll the index in a given axis with periodical boundary condition
      * @param rawind raw index
      * @param axis
+     * + For positive axis: `0, 1,..., dim-1`
+     * + For corresponding negative axis: `-dim, 1-dim,..., -1`
      * @return Raw index after rolling
      */
     int rollindex(int rawind, int axis){
@@ -292,12 +295,24 @@ public:
     }
 };
 template<typename T>
+/**
+ * @brief Print a vector for the last dimension of an ndarray to stream
+ * @param out   stream
+ * @param x     ndarray
+ * @param start
+ */
 void printvec(ostream &out, ndarray<T> &x, const T *start){
     for(int i=0;i<x.shape(x.dim()-1);i++)
         out<<*(start+i*x.stride(x.dim()-1))<<'\t';
     out<<"\n";
 }
 template<typename T>
+/**
+ * @brief Print a matrix for the last two dimensions of an ndarray to stream
+ * @param out   stream
+ * @param x     ndarray
+ * @param start
+ */
 void printmat(ostream &out, ndarray<T> &x, const T *start){
     out<<"\t ";
     for(int i=0;i<x.shape(x.dim()-1);i++) out<<i<<'\t';
@@ -311,27 +326,27 @@ void printmat(ostream &out, ndarray<T> &x, const T *start){
 
 template<typename T>
 /**
- * @brief Print the matrix/ndarray
+ * @brief Print the ndarray
  *
  * + 1 D array, printed horizontally
  * + 2 D array, printed as an matrix
  * + 3+D array, printed as Many Matrics.
  */
-ostream & operator<<(ostream &out, ndarray<T> &x){
+void printsubmat(ostream &out, ndarray<T> &x){
     if(x.dim()==0){
         cerr<<"Error: print an empty array"<<endl;
-        return out;
+        return;
     }
     else if(x.dim()==1){
-        cout<<"Size:"<<x.size()<<"\t|";
+        out<<"Size:"<<x.size()<<"\t|";
         printvec(out, x, x.head);
     }
     else{
-        cout<<"Dimension:"<<x.dim()<<'\t';
-        cout<<"\nShape\t ";
+        out<<"Dimension:"<<x.dim()<<'\t';
+        out<<"\nShape\t ";
         for(int i=0;i<x.dim();i++)
-            cout<<x.shape(i)<<"\t";
-        cout<<"\n";
+            out<<x.shape(i)<<"\t";
+        out<<"\n";
         if(x.dim()==2){
             printmat(out, x, x.head);
         }
@@ -343,15 +358,42 @@ ostream & operator<<(ostream &out, ndarray<T> &x){
                     ind[j+1]=0;
                     ind[j]+=1;
                 }
-                cout<<"Matrix No. "<<i<<": (";
+                out<<"Matrix No. "<<i<<": (";
                 for(int j=1;j<x.dim()-1;j++)
-                    cout<<ind[j]<<", ";
-                cout<<"\b\b) \n";
+                    out<<ind[j]<<", ";
+                out<<"\b\b) \n";
                 printmat(out, x, x.head+i*step);
                 ind[x.dim()-2]+=1;
             }
         }
     }
+}
+template <typename T>
+ostream & operator<<(ostream &out, ndarray<int> &x){
+    int ind[x.dim()+1]={0};
+    for(int i=0;i<x.size();i++){
+        for(int j=x.dim()-1;ind[j+1]==x.shape(j);j--){
+            ind[j+1]=0;
+            ind[j]+=1;
+        }
+        out<<"Matrix No. "<<i<<": (";
+        for(int j=1;j<x.dim()+1;j++)
+            out<<ind[j]<<", ";
+        out<<"\b\b) :";
+        out<<x[i];
+        out<<'\n';
+        ind[x.dim()]+=1;
+    }
     return out;
 }
+
+ostream & operator<<(ostream &out, ndarray<int> &x){
+    printsubmat(out, x);
+    return out;
+}
+ostream & operator<<(ostream &out, ndarray<double> &x){
+    printsubmat(out, x);
+    return out;
+}
+
 #endif //NDARRAY_H
