@@ -121,15 +121,15 @@ public:
      */
     template<typename T>
     ndarray(const ndarray<T> & x):
-        _dim(x._dim),_shape(new int[x._dim]),\
-        _stride(new int[x._dim+1]),\
-        head(new dtype[*(x._stride)])
+        _dim(x.dim()),_shape(new int[x.dim()]),\
+        _stride(new int[x.dim()+1]),\
+        head(new dtype[x.size()])
     {
         for(int i=0;i<_dim;i++){
-            _shape[i]=x._shape[i];
-            _stride[i]=x._stride[i];
+            _shape[i]=x.shape(i);
+            _stride[i+1]=x.stride(i);
         }
-        _stride[_dim]=x._stride[_dim];
+        _stride[0]=x.size();
     }
     /// Move constructor
     ndarray(ndarray<dtype> && x):
@@ -284,19 +284,20 @@ public:
      * + For corresponding negative axis: `-dim, 1-dim,..., -1`
      * @return Raw index after rolling
      */
-    int rollindex(int rawind, int axis){
+    int rollindex(int rawind, int axis, int dir=1){
         int axisind=(rawind%_stride[axis])/_stride[axis+1];
-        if(axis<0){
-            axis+=_dim;
-            rawind-=_stride[axis+1];
-            if(axisind!=0)
-                rawind+=_stride[axis];
-        }
-        else{
+//        cout<<"rollindex"<<' '<<rawind;
+        if(dir==1){
             rawind+=_stride[axis+1];
             if(axisind+1==_shape[axis])
                 rawind-=_stride[axis];
         }
+        else{
+            rawind-=_stride[axis+1];
+            if(axisind==0)
+                rawind+=_stride[axis];
+        }
+//        cout<<"->"<<rawind<<" ax "<<axis<<" dir "<<dir<<endl;
         return rawind;
     }
     /// Transpose between two axis
@@ -419,5 +420,8 @@ ostream & operator<<(ostream &out, ndarray<double> &x){
     printsubmat(out, x);
     return out;
 }
-
+ostream & operator<<(ostream &out, ndarray<char> &x){
+    printsubmat(out, x);
+    return out;
+}
 #endif //NDARRAY_H
