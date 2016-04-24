@@ -300,6 +300,15 @@ public:
 //        cout<<"->"<<rawind<<" ax "<<axis<<" dir "<<dir<<endl;
         return rawind;
     }
+    int rollind(int rawind, int ax, int D){
+        if(ax<0){
+            return rollindex(rawind, ax+D, -1);
+        }
+        else{
+            return rollindex(rawind, ax, 1);
+        }
+    }
+
     /// Transpose between two axis
     void transpose(int i=1, int j=0){
         if(i==j) return;
