@@ -327,6 +327,18 @@ public:
         }
         return s;
     }
+    void printind(int ind){
+        int t[_dim];
+        for(int i=_dim-1;i>=0;i--){
+            t[i]=ind%_stride[i];
+            ind/=_stride[i];
+        }
+        cout<<"(";
+        for(int i=0;i<_dim;i++){
+            cout<<t[i]<<", ";
+        }
+        cout<<"\b\b) \n";
+    }
 };
 template<typename T>
 /**
