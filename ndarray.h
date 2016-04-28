@@ -10,6 +10,7 @@ using namespace std;
  * @todo
  * + broadcasting?
  * + Math operations
+ * + Make dimension a template argument
  *
  * Should have a view class for slicing?
  */
@@ -300,9 +301,9 @@ public:
 //        cout<<"->"<<rawind<<" ax "<<axis<<" dir "<<dir<<endl;
         return rawind;
     }
-    int rollind(int rawind, int ax, int D){
+    int rollind(int rawind, int ax){
         if(ax<0){
-            return rollindex(rawind, ax+D, -1);
+            return rollindex(rawind, ax+_dim, -1);
         }
         else{
             return rollindex(rawind, ax, 1);
