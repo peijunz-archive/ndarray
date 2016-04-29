@@ -230,6 +230,7 @@ public:
         }
         return offset;
     }
+    template<int D>
     /**
      * @brief Indexing by an index array
      * @param coo   the coordinates of an element
@@ -241,12 +242,8 @@ public:
      * @return The indexed element
      */
     dtype & operator()(int *coo){
-        if(_dim==2) return head[dot<2>(coo)];
-        if(_dim==3) return head[dot<3>(coo)];
-        if(_dim==4) return head[dot<4>(coo)];
-        if(_dim==5) return head[dot<5>(coo)];
         int offset=0;
-        for(int i=0;i<_dim;i++){
+        for(int i=0;i<D;i++){
             offset+=coo[i]*_stride[i+1];
         }
         return head[offset];
@@ -288,7 +285,6 @@ public:
      */
     int rollindex(int rawind, int axis, int dir=1){
         int axisind=(rawind%_stride[axis])/_stride[axis+1];
-//        cout<<"rollindex"<<' '<<rawind;
         if(dir==1){
             rawind+=_stride[axis+1];
             if(axisind+1==_shape[axis])
@@ -299,7 +295,6 @@ public:
             if(axisind==0)
                 rawind+=_stride[axis];
         }
-//        cout<<"->"<<rawind<<" ax "<<axis<<" dir "<<dir<<endl;
         return rawind;
     }
     /**
