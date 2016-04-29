@@ -281,6 +281,7 @@ public:
      * @brief Roll the index in a given axis with periodical boundary condition
      * @param rawind raw index
      * @param axis
+     * @param dir   positive/negative
      * + For positive axis: `0, 1,..., dim-1`
      * + For corresponding negative axis: `-dim, 1-dim,..., -1`
      * @return Raw index after rolling
@@ -301,6 +302,9 @@ public:
 //        cout<<"->"<<rawind<<" ax "<<axis<<" dir "<<dir<<endl;
         return rawind;
     }
+    /**
+     * @brief roll ind for unknow positiveness by using rollindex
+     */
     int rollind(int rawind, int ax){
         if(ax<0){
             return rollindex(rawind, ax+_dim, -1);
