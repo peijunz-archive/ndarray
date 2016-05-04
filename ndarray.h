@@ -252,7 +252,6 @@ public:
     int adder(int *p,int last){
       return *p*last;
     }
-
     template<typename... Args>
     int adder(int *p, int first, Args... args) {
       return *p*first+adder(p+1, args...);
