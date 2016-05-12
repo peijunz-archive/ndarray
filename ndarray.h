@@ -18,8 +18,8 @@ template <typename dtype>
 /// The n-Dimensional C-style array template class
 class ndarray{
 private:
-    int _dim;            ///< dimension of the array
-    int *_shape;         ///< shape of each dimension
+    uint _dim;            ///< dimension of the array
+    uint *_shape;         ///< shape of each dimension
     /**
      * @brief stride of every axis.
      *
@@ -27,13 +27,13 @@ private:
      * the naive stride of last index is reserved.
      * So the last stride may be non-zero. Be cautious!
      */
-    int *_stride;
+    uint *_stride;
     void check(){
         if(_dim<=0){
             cerr<<"Error: Positive dimension needed!"<<endl;
             exit(0);
         }
-        for(int i=0;i<_dim;i++){
+        for(uint i=0;i<_dim;i++){
             if(_shape[i]<=0){
                 cerr<<"Error: Positive shape needed!"<<endl;
                 exit(0);
@@ -61,10 +61,10 @@ public:
      * @param d     dimension
      * @param w     width
      */
-    ndarray(int d, int w):
-        _dim(d),_shape(new int[d]),_stride(new int[d+1]){
+    ndarray(uint d, uint w):
+        _dim(d),_shape(new uint[d]),_stride(new uint[d+1]){
         _stride[d]=1;
-        for(int i=0;i<d;i++){
+        for(uint i=0;i<d;i++){
             _shape[i]=w;
             _stride[d-i-1]=_stride[d-i]*w;
         }
@@ -78,10 +78,10 @@ public:
      *
      * For dynamic construction
      */
-    ndarray(int d, int *sh):
-        _dim(d),_shape(new int[d]),_stride(new int[d+1]){
+    ndarray(uint d, uint *sh):
+        _dim(d),_shape(new uint[d]),_stride(new uint[d+1]){
         _stride[d]=1;
-        for(int i=0;i<d;i++){
+        for(uint i=0;i<d;i++){
             _shape[i]=sh[i];
             _stride[d-i-1]=_stride[d-i]*sh[d-i-1];
         }
@@ -94,12 +94,12 @@ public:
      *
      * For static construction
      */
-    ndarray(initializer_list<int> l):_dim(l.size()){
-        _shape=new int[_dim];
+    ndarray(initializer_list<uint> l):_dim(l.size()){
+        _shape=new uint[_dim];
         copy(begin(l), end(l), _shape);
-        _stride=new int[_dim+1];
+        _stride=new uint[_dim+1];
         _stride[_dim]=1;
-        for(int i=0;i<_dim;i++){
+        for(uint i=0;i<_dim;i++){
             _stride[_dim-i-1]=_stride[_dim-i]*_shape[_dim-i-1];
         }
         check();
@@ -122,11 +122,11 @@ public:
      */
     template<typename T>
     ndarray(const ndarray<T> & x):
-        _dim(x.dim()),_shape(new int[x.dim()]),\
-        _stride(new int[x.dim()+1]),\
+        _dim(x.dim()),_shape(new uint[x.dim()]),\
+        _stride(new uint[x.dim()+1]),\
         head(new dtype[x.size()])
     {
-        for(int i=0;i<_dim;i++){
+        for(uint i=0;i<_dim;i++){
             _shape[i]=x.shape(i);
             _stride[i+1]=x.stride(i);
         }
@@ -169,7 +169,7 @@ public:
                 *this=ndarray<dtype>(x);
             }
             if(*_stride==*(x._stride)){
-                for(int i=0;i<*_stride;i++){
+                for(uint i=0;i<*_stride;i++){
                     head[i]=x.head[i];
                 }
             }
@@ -196,17 +196,17 @@ public:
      * @param val   initial value
      */
     ndarray<dtype> & operator= (dtype val){
-        for(int i=0;i<*_stride;i++)
+        for(uint i=0;i<*_stride;i++)
             head[i]=val;
         return *this;
     }
 
-    int size() const {return *_stride;}
-    int dim() const {return _dim;}
-    int shape(int i) const {return _shape[i];}
-    const int * shape() const {return _shape;}
-    int stride(int i) const{return _stride[i+1];}
-    const int * stride() const{return _stride+1;}
+    uint size() const {return *_stride;}
+    uint dim() const {return _dim;}
+    uint shape(uint i) const {return _shape[i];}
+    const uint * shape() const {return _shape;}
+    uint stride(uint i) const{return _stride[i+1];}
+    const uint * stride() const{return _stride+1;}
 
     /**
      * @brief Naive indexing using raw index
@@ -215,22 +215,22 @@ public:
      * + Good efficiency!
      * + If dim==1, use [] rather than ()
      */
-    dtype & operator[] (int rawind){return *(head+rawind);}
+    dtype & operator[] (uint rawind){return *(head+rawind);}
 
-    template<int N>
+    template<uint N>
     /**
      * @brief dot product for small N
      * @param coo   the coordinates of an element
      * @return
      */
-    int dot(int *coo){
-        int offset=0;
-        for(int i=0;i<N;i++){
+    uint dot(uint *coo){
+        uint offset=0;
+        for(uint i=0;i<N;i++){
             offset+=coo[i]*_stride[i+1];
         }
         return offset;
     }
-    template<int D>
+    template<uint D>
     /**
      * @brief Indexing by an index array
      * @param coo   the coordinates of an element
@@ -241,19 +241,19 @@ public:
      *
      * @return The indexed element
      */
-    dtype & operator()(int *coo){
-        int offset=0;
-        for(int i=0;i<D;i++){
+    dtype & operator()(uint *coo){
+        uint offset=0;
+        for(uint i=0;i<D;i++){
             offset+=coo[i]*_stride[i+1];
         }
         return head[offset];
     }
 
-    int adder(int *p,int last){
+    uint adder(uint *p,uint last){
       return *p*last;
     }
     template<typename... Args>
-    int adder(int *p, int first, Args... args) {
+    uint adder(uint *p, uint first, Args... args) {
       return *p*first+adder(p+1, args...);
     }
 
@@ -282,8 +282,8 @@ public:
      * + For corresponding negative axis: `-dim, 1-dim,..., -1`
      * @return Raw index after rolling
      */
-    int rollindex(int rawind, int axis, int dir=1){
-        int axisind=(rawind%_stride[axis])/_stride[axis+1];
+    uint rollindex(uint rawind, int axis, int dir=1){
+        uint axisind=(rawind%_stride[axis])/_stride[axis+1];
         if(dir==1){
             rawind+=_stride[axis+1];
             if(axisind+1==_shape[axis])
@@ -299,7 +299,7 @@ public:
     /**
      * @brief roll ind for unknow positiveness by using rollindex
      */
-    int rollind(int rawind, int ax){
+    uint rollind(int rawind, int ax){
         if(ax<0){
             return rollindex(rawind, ax+_dim, -1);
         }
@@ -309,9 +309,9 @@ public:
     }
 
     /// Transpose between two axis
-    void transpose(int i=1, int j=0){
+    void transpose(uint i=1, uint j=0){
         if(i==j) return;
-        int tmp;
+        uint tmp;
         tmp=_stride[i+1];
         _stride[i+1]=_stride[j+1];
         _stride[j+1]=tmp;
@@ -319,21 +319,21 @@ public:
         _shape[i]=_shape[j];
         _shape[j]=tmp;
     }
-    int size_attached(){
-        int s=sizeof(ndarray<dtype>);
+    uint size_attached(){
+        uint s=sizeof(ndarray<dtype>);
         if(_dim){
-            s+=sizeof(int)*(2*_dim+1);
+            s+=sizeof(uint)*(2*_dim+1);
         }
         return s;
     }
-    void printind(int ind){
-        int t[_dim];
-        for(int i=_dim-1;i>=0;i--){
+    void printind(uint ind){
+        uint t[_dim];
+        for(uint i=_dim-1;i>=0;i--){
             t[i]=ind%_stride[i];
             ind/=_stride[i];
         }
         cout<<"(";
-        for(int i=0;i<_dim;i++){
+        for(uint i=0;i<_dim;i++){
             cout<<t[i]<<", ";
         }
         cout<<"\b\b) \n";
@@ -347,7 +347,7 @@ template<typename T>
  * @param start
  */
 void printvec(ostream &out, ndarray<T> &x, const T *start){
-    for(int i=0;i<x.shape(x.dim()-1);i++)
+    for(uint i=0;i<x.shape(x.dim()-1);i++)
         out<<*(start+i*x.stride(x.dim()-1))<<'\t';
     out<<"\n";
 }
@@ -360,9 +360,9 @@ template<typename T>
  */
 void printmat(ostream &out, ndarray<T> &x, const T *start){
     out<<"\t ";
-    for(int i=0;i<x.shape(x.dim()-1);i++) out<<i<<'\t';
+    for(uint i=0;i<x.shape(x.dim()-1);i++) out<<i<<'\t';
     out<<"\n\t|----------------------------------\n";
-    for(int i=0;i<x.shape(x.dim()-2);i++){
+    for(uint i=0;i<x.shape(x.dim()-2);i++){
         out<<i<<"\t|";
         printvec(out, x, start+i*x.stride(x.dim()-2));
     }
@@ -389,22 +389,22 @@ void printsubmat(ostream &out, ndarray<T> &x){
     else{
         out<<"Dimension:"<<x.dim()<<'\t';
         out<<"\nShape\t ";
-        for(int i=0;i<x.dim();i++)
+        for(uint i=0;i<x.dim();i++)
             out<<x.shape(i)<<"\t";
         out<<"\n";
         if(x.dim()==2){
             printmat(out, x, x.head);
         }
         else{
-            int ind[x.dim()-1]={0};
-            int step=x.stride(x.dim()-3), num=x.size()/step;
-            for(int i=0;i<num;i++){
-                for(int j=x.dim()-3;ind[j+1]==x.shape(j);j--){
+            uint ind[x.dim()-1]={0};
+            uint step=x.stride(x.dim()-3), num=x.size()/step;
+            for(uint i=0;i<num;i++){
+                for(uint j=x.dim()-3;ind[j+1]==x.shape(j);j--){
                     ind[j+1]=0;
                     ind[j]+=1;
                 }
                 out<<"Matrix No. "<<i<<": (";
-                for(int j=1;j<x.dim()-1;j++)
+                for(uint j=1;j<x.dim()-1;j++)
                     out<<ind[j]<<", ";
                 out<<"\b\b) \n";
                 printmat(out, x, x.head+i*step);
