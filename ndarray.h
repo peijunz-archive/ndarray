@@ -50,8 +50,7 @@ class ndarray {
     }
     /**
      * @brief Initialize an ndarray for a square matrix
-     * @param d     dimension
-     * @param w     width
+     * @param width
      */
     ndarray(uint width): _shape(new uint[D]), _stride(new uint[D + 1]) {
         _stride[D] = 1;
@@ -64,7 +63,6 @@ class ndarray {
     }
     /**
      * @brief A ndarray with a shape given by pointer/array
-     * @param d     dimension
      * @param sh    shape array
      *
      * For dynamic construction
