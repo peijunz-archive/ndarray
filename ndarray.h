@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <initializer_list>
+#define MODERN
 using namespace std;
 /**
  * @file ndarray.h
@@ -76,6 +77,7 @@ class ndarray {
         check();
         head = new dtype[*_stride];
     }
+#ifdef MODERN
     /**
      * @brief Initialize an ndarray with a shape given by an initializer list
      * @param l     initializer list for shape
@@ -93,6 +95,7 @@ class ndarray {
         check();
         head = new dtype[*_stride];
     }
+#endif
 
     /**
      * @brief Copy constructor copying the shape only.
