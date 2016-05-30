@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <initializer_list>
-#define MODERN
+#define CPP11SUPPORT
 using namespace std;
 /**
  * @file ndarray.h
@@ -77,7 +77,7 @@ class ndarray {
         check();
         head = new dtype[*_stride];
     }
-#ifdef MODERN
+#ifdef CPP11SUPPORT
     /**
      * @brief Initialize an ndarray with a shape given by an initializer list
      * @param l     initializer list for shape
