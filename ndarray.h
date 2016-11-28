@@ -3,7 +3,6 @@
 #include <iostream>
 #include <vector>
 #include <initializer_list>
-#define CPP11SUPPORT
 using namespace std;
 /**
  * @file ndarray.h
@@ -45,15 +44,13 @@ class ndarray {
         delete [] _shape;
         delete [] _stride;
     }
-    /// Naive Constructor setting size to 0
-    ndarray(): _shape(new uint[D]), _stride(new uint[D + 1]), head(nullptr) {
-        *_stride = 0;
-    }
+    /// Constructor an empty ndarray
+    ndarray(): _shape(nullptr), _stride(nullptr), head(nullptr) {}
     /**
      * @brief Initialize an ndarray for a square matrix
      * @param width
      */
-    ndarray(uint width): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(uint width): _shape(new uint[D]), _stride(new uint[D + 1]) {
         _stride[D] = 1;
         for(uint i = 0; i < D; i++) {
             _shape[i] = width;
@@ -68,7 +65,7 @@ class ndarray {
      *
      * For dynamic construction
      */
-    ndarray(uint *sh): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(uint *sh): _shape(new uint[D]), _stride(new uint[D + 1]) {
         _stride[D] = 1;
         for(uint i = 0; i < D; i++) {
             _shape[i] = sh[i];
@@ -77,14 +74,13 @@ class ndarray {
         check();
         head = new dtype[*_stride];
     }
-#ifdef CPP11SUPPORT
     /**
      * @brief Initialize an ndarray with a shape given by an initializer list
      * @param l     initializer list for shape
      *
      * For static construction
      */
-    ndarray(initializer_list<uint> l): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(initializer_list<uint> l): _shape(new uint[D]), _stride(new uint[D + 1]) {
         if(l.size() != D)
             exit(0);
         copy(begin(l), end(l), _shape);
@@ -95,7 +91,6 @@ class ndarray {
         check();
         head = new dtype[*_stride];
     }
-#endif
 
     /**
      * @brief Copy constructor copying the shape only.
@@ -110,15 +105,20 @@ class ndarray {
      * ndarray<int> b=a, c; // b get the shape of a at definition
      * c=ndarray<int>(a)    // c get the shape of a
      * ```
+     * DO NOT COPY EMPTY NDARRAY
      */
     template<typename T>
-    ndarray(const ndarray<T, D> & x): _shape(new uint[D]), _stride(new uint[D + 1]) {
-        for(uint i = 0; i < D; i++) {
-            _shape[i] = x.shape(i);
-            _stride[i + 1] = x.stride(i);
+    ndarray(const ndarray<T, D> & x):_shape(nullptr), _stride(nullptr), head(nullptr){
+        if(!x.empty()){
+            _shape=new uint[D];
+            _stride=new uint[D + 1];
+            for(uint i = 0; i < D; i++) {
+                _shape[i] = x.shape(i);
+                _stride[i + 1] = x.stride(i);
+            }
+            _stride[0] = x.size();
+            head = new dtype[x.size()];
         }
-        _stride[0] = x.size();
-        head = new dtype[x.size()];
     }
     /// Move constructor
     ndarray(ndarray<dtype, D> && x): _shape(x._shape), head(x.head), _stride(x._stride) {
@@ -148,19 +148,19 @@ class ndarray {
      */
     ndarray<dtype, D> & operator= (const ndarray<dtype, D>& x) {
         if(this != &x) {
-            if(*(x._stride) == 0) {
-                delete [] head;
-                return *this;
+            if(x.empty()) {
+                cerr << "RHS is empty! Clear first." << endl;
+                exit(0);
             }
-            if(*_stride == 0) {
-                *this = ndarray<dtype, D>(x);
+            if(empty()) {
+                *this = ndarray<dtype, D>(x);   ///<用到右值move，构造出相同大小的数组。
             }
             if(*_stride == *(x._stride)) {
                 for(uint i = 0; i < *_stride; i++) {
                     head[i] = x.head[i];
                 }
             } else {
-                cerr << "Unmatched copy! Please clear() first." << endl;
+                cerr << "Unmatched copy! Please clear first." << endl;
                 exit(0);
             }
         }
@@ -168,12 +168,9 @@ class ndarray {
     }
     /// Move assignment
     ndarray<dtype, D> & operator= (ndarray<dtype, D>&& x) {
-        _shape = x._shape;
-        head = x.head;
-        _stride = x._stride;
-        x._shape = nullptr;
-        x.head = nullptr;
-        x._stride = nullptr;
+        swap(_shape, x._shape);
+        swap(_stride, x._stride);
+        swap(head, x.head);
         return *this;
     }
     /**
@@ -181,11 +178,15 @@ class ndarray {
      * @param val   initial value
      */
     ndarray<dtype, D> & operator= (dtype val) {
+        if(empty())
+            return *this;
         for(uint i = 0; i < *_stride; i++)
             head[i] = val;
         return *this;
     }
-
+    bool empty() const{
+        return (_stride==nullptr);
+    }
     uint size() const {
         return *_stride;
     }
@@ -288,16 +289,10 @@ class ndarray {
 
     /// Transpose between two axis
     void transpose(uint i = 1, uint j = 0) {
-        if(i == j) return;
-        uint tmp;
-        tmp = _stride[i + 1];
-        _stride[i + 1] = _stride[j + 1];
-        _stride[j + 1] = tmp;
-        tmp = _shape[i];
-        _shape[i] = _shape[j];
-        _shape[j] = tmp;
+        swap(_stride[i + 1], _stride[j + 1]);
+        swap(_shape[i + 1], _shape[j + 1]);
     }
-    uint size_attached() {
+    uint size_attached() {///< empty condition
         uint s = sizeof(ndarray<dtype, D>);
         s += sizeof(uint) * (2 * D + 1);
         return s;
@@ -305,7 +300,7 @@ class ndarray {
     vector<uint> subind(uint ind) {
         vector<uint> t;
         t.reserve(D);
-        for(uint i = D - 1; i >= 0; i--) {
+        for(int i = int(D) - 1; i >= 0; i--) {
             t[i] = ind % _stride[i];
             ind /= _stride[i];
         }
