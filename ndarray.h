@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <initializer_list>
+#define self (*this)
 using namespace std;
 /**
  * @file ndarray.h
@@ -36,8 +37,15 @@ class ndarray {
             }
         }
     }
+    template<int N>
+    ndarray<dtype, D>& pm(const ndarray<dtype, D> &rhs){
+        for(uint i = 0; i < *_stride; i++)
+            head[i] += N*rhs[i];
+        return *this;
+    }
 
   public:
+    using iterator=dtype *;
     dtype *head;        ///< head of the array data
     ~ndarray() {
         delete [] head;
@@ -65,7 +73,7 @@ class ndarray {
      *
      * For dynamic construction
      */
-    explicit ndarray(uint *sh): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(const uint *sh): _shape(new uint[D]), _stride(new uint[D + 1]) {
         _stride[D] = 1;
         for(uint i = 0; i < D; i++) {
             _shape[i] = sh[i];
@@ -81,8 +89,10 @@ class ndarray {
      * For static construction
      */
     explicit ndarray(initializer_list<uint> l): _shape(new uint[D]), _stride(new uint[D + 1]) {
-        if(l.size() != D)
+        if(l.size() != D){
+            cerr<<"Initialization of shape failed."<<endl;
             exit(0);
+        }
         copy(begin(l), end(l), _shape);
         _stride[D] = 1;
         for(uint i = 0; i < D; i++) {
@@ -95,29 +105,21 @@ class ndarray {
     /**
      * @brief Copy constructor copying the shape only.
      * @param x     The source of ndarray
-     * + You can copy the shape at the definition or copy the
-     *   shape with moving assignment anywhere
-     * + If you want to copy the data, use copy assignment!
-     *
-     * ```cpp
-     * ndarray<int> a{3,4};
-     * a=1;
-     * ndarray<int> b=a, c; // b get the shape of a at definition
-     * c=ndarray<int>(a)    // c get the shape of a
-     * ```
-     * DO NOT COPY EMPTY NDARRAY
      */
     template<typename T>
-    ndarray(const ndarray<T, D> & x):_shape(nullptr), _stride(nullptr), head(nullptr){
-        if(!x.empty()){
-            _shape=new uint[D];
-            _stride=new uint[D + 1];
+    ndarray(const ndarray<T, D> & x): _shape(nullptr), _stride(nullptr), head(nullptr) {
+        if(!x.empty()) {
+            _shape = new uint[D];
+            _stride = new uint[D + 1];
             for(uint i = 0; i < D; i++) {
                 _shape[i] = x.shape(i);
                 _stride[i + 1] = x.stride(i);
             }
             _stride[0] = x.size();
             head = new dtype[x.size()];
+            for(uint i = 0; i < *_stride; i++) {
+                head[i] = x[i];
+            }
         }
     }
     /// Move constructor
@@ -129,40 +131,11 @@ class ndarray {
     /**
      * @brief Copy Assignment copying all data
      * @param x     The source of ndarray
-     * @todo If the shape is the same while stride is not,
-     *   how to copy? Using nditer?
-     *
-     * + Copy an empty x array will clear() the array
-     * + Copy to an empty array will deep copy the array x
-     * + Except for above conditions, copy between arrays
-     *   of different size is an error
-     * + Indirective method is clear first and then copy
-     * + If size is equal, copy according to raw index,
-     *   regardless of the shape, dim, stride
-     *
-     * ```
-     * ndarray<int> c{3,3}, d;
-     * c=1
-     * d=c;    // Copy the whole data of c
-     * ```
      */
     ndarray<dtype, D> & operator= (const ndarray<dtype, D>& x) {
         if(this != &x) {
-            if(x.empty()) {
-                cerr << "RHS is empty! Clear first." << endl;
-                exit(0);
-            }
-            if(empty()) {
-                *this = ndarray<dtype, D>(x);   ///<用到右值move，构造出相同大小的数组。
-            }
-            if(*_stride == *(x._stride)) {
-                for(uint i = 0; i < *_stride; i++) {
-                    head[i] = x.head[i];
-                }
-            } else {
-                cerr << "Unmatched copy! Please clear first." << endl;
-                exit(0);
-            }
+            ndarray<dtype, D> copy = x;
+            swap(*this, copy);
         }
         return *this;
     }
@@ -184,8 +157,8 @@ class ndarray {
             head[i] = val;
         return *this;
     }
-    bool empty() const{
-        return (_stride==nullptr);
+    bool empty() const {
+        return (_stride == nullptr);
     }
     uint size() const {
         return *_stride;
@@ -216,6 +189,9 @@ class ndarray {
     dtype & operator[](uint rawind) {
         return *(head + rawind);
     }
+    const dtype & operator[](uint rawind) const {
+        return *(head + rawind);
+    }
 
     /**
      * @brief Indexing by an index array
@@ -230,11 +206,11 @@ class ndarray {
         return head[offset];
     }
 
-    uint adder(uint *p, uint last) {
+    uint adder(uint *p, uint last) const {
         return *p * last;
     }
     template<typename... Args>
-    uint adder(uint *p, uint first, Args... args) {
+    uint adder(uint *p, uint first, Args... args) const {
         return *p * first + adder(p + 1, args...);
     }
 
@@ -253,6 +229,10 @@ class ndarray {
     dtype & operator()(Args... args) {
         return *(head + adder(_stride + 1, args...));
     }
+    template<typename... Args>
+    const dtype & operator()(Args... args) const {
+        return *(head + adder(_stride + 1, args...));
+    }
 
     /**
      * @brief Roll the index in a given axis with periodical boundary condition
@@ -263,7 +243,7 @@ class ndarray {
      * + For corresponding negative axis: `-dim, 1-dim,..., -1`
      * @return Raw index after rolling
      */
-    uint rollindex(uint rawind, int axis, int dir = 1) {
+    uint rollindex(uint rawind, int axis, int dir = 1) const {
         uint axisind = (rawind % _stride[axis]) / _stride[axis + 1];
         if(dir == 1) {
             rawind += _stride[axis + 1];
@@ -279,7 +259,7 @@ class ndarray {
     /**
      * @brief roll ind for unknow positiveness by using rollindex
      */
-    uint rollind(int rawind, int ax) {
+    uint rollind(int rawind, int ax) const {
         if(ax < 0) {
             return rollindex(rawind, ax + D, -1);
         } else {
@@ -292,12 +272,12 @@ class ndarray {
         swap(_stride[i + 1], _stride[j + 1]);
         swap(_shape[i + 1], _shape[j + 1]);
     }
-    uint size_attached() {///< empty condition
+    uint size_attached() const { ///< empty condition
         uint s = sizeof(ndarray<dtype, D>);
         s += sizeof(uint) * (2 * D + 1);
         return s;
     }
-    vector<uint> subind(uint ind) {
+    vector<uint> subind(uint ind) const {
         vector<uint> t;
         t.reserve(D);
         for(int i = int(D) - 1; i >= 0; i--) {
@@ -306,5 +286,55 @@ class ndarray {
         }
         return t;
     }
+    ndarray<dtype, D>& operator+=(const ndarray<dtype, D> &rhs){
+        return this->pm<1>(rhs);
+    }
+    ndarray<dtype, D>& operator-=(const ndarray<dtype, D> &rhs){
+        return *this->pm<-1>(rhs);
+    }
+    ndarray<dtype, D>& operator-(){
+        for(uint i=0;i<*_stride;i++){
+            head[i]*=-1;
+        }
+        return *this;
+    }
 };
+
+template<class dtype>
+class matrix: public ndarray<dtype, 2> {
+  public:
+    using ndarray<dtype, 2>::operator=;
+    using ndarray<dtype, 2>::ndarray;
+    void print() {
+        for(int i = 0; i < this->shape(0); i++) {
+            for(int j = 0; j < this->shape(1); j++) {
+                cout << self(i, j) << '\t';
+            }
+            cout << endl;
+        }
+    }
+    matrix<dtype> operator*(matrix<dtype> &rhs) {
+        matrix<dtype> c{this->shape(0), rhs.shape(1)};
+        c = 0;
+        if(this->shape(1) != rhs.shape(0)) {
+            cerr << "Dimension not match!" << endl;
+            return c;
+        }
+        for(int i = 0; i < c.shape(0); i++) {
+            for(int j = 0; j < c.shape(1); j++) {
+                for(int k = 0; k < this->shape(1); k++) {
+                    c(i, j) += self(i, k) * rhs(k, j);
+                }
+            }
+        }
+        return c;
+    }
+    uint nrow() const {
+        return this->empty() ? 0 : this->shape(0);
+    }
+    uint ncol() const {
+        return this->empty() ? 0 : this->shape(1);
+    }
+};
+
 #endif //NDARRAY_H
