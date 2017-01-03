@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <initializer_list>
+#include "nditer.h"
 #define self (*this)
 using namespace std;
 /**
@@ -16,11 +17,15 @@ using namespace std;
  *
  * Should have a view class for slicing?
  */
-template <typename dtype, uint D>
+template <typename dtype, int D>
 /// The n-Dimensional C-style array template class
 class ndarray {
+  public:
+    using size_t=int32_t;
+    using iterator=dtype *;
+    using index_t=nditer<D, size_t>;
   private:
-    uint *_shape;         ///< shape of each dimension
+    size_t *_shape;         ///< shape of each dimension
     /**
      * @brief stride of every axis.
      *
@@ -28,9 +33,9 @@ class ndarray {
      * the naive stride of last index is reserved.
      * So the last stride may be non-zero. Be cautious!
      */
-    uint *_stride;
+    size_t *_stride;
     void check() {
-        for(uint i = 0; i < D; i++) {
+        for(int i = 0; i < D; i++) {
             if(_shape[i] <= 0) {
                 cerr << "Error: Positive shape needed!" << endl;
                 exit(0);
@@ -39,13 +44,12 @@ class ndarray {
     }
     template<int N>
     ndarray<dtype, D>& pm(const ndarray<dtype, D> &rhs){
-        for(uint i = 0; i < *_stride; i++)
+        for(size_t i = 0; i < size(); i++)
             head[i] += N*rhs[i];
         return *this;
     }
 
   public:
-    using iterator=dtype *;
     dtype *head;        ///< head of the array data
     ~ndarray() {
         delete [] head;
@@ -58,14 +62,14 @@ class ndarray {
      * @brief Initialize an ndarray for a square matrix
      * @param width
      */
-    explicit ndarray(uint width): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(size_t width): _shape(new size_t[D]), _stride(new size_t[D + 1]) {
         _stride[D] = 1;
-        for(uint i = 0; i < D; i++) {
+        for(int i = 0; i < D; i++) {
             _shape[i] = width;
             _stride[D - i - 1] = _stride[D - i] * width;
         }
         check();
-        head = new dtype[*_stride];
+        head = new dtype[size()];
     }
     /**
      * @brief A ndarray with a shape given by pointer/array
@@ -73,14 +77,14 @@ class ndarray {
      *
      * For dynamic construction
      */
-    explicit ndarray(const uint *sh): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(const size_t *sh): _shape(new size_t[D]), _stride(new size_t[D + 1]) {
         _stride[D] = 1;
-        for(uint i = 0; i < D; i++) {
+        for(int i = 0; i < D; i++) {
             _shape[i] = sh[i];
             _stride[D - i - 1] = _stride[D - i] * sh[D - i - 1];
         }
         check();
-        head = new dtype[*_stride];
+        head = new dtype[size()];
     }
     /**
      * @brief Initialize an ndarray with a shape given by an initializer list
@@ -88,18 +92,18 @@ class ndarray {
      *
      * For static construction
      */
-    explicit ndarray(initializer_list<uint> l): _shape(new uint[D]), _stride(new uint[D + 1]) {
+    explicit ndarray(initializer_list<size_t> l): _shape(new size_t[D]), _stride(new size_t[D + 1]) {
         if(l.size() != D){
             cerr<<"Initialization of shape failed."<<endl;
             exit(0);
         }
-        copy(begin(l), end(l), _shape);
+        copy(std::begin(l), std::end(l), _shape);
         _stride[D] = 1;
-        for(uint i = 0; i < D; i++) {
+        for(int i = 0; i < D; i++) {
             _stride[D - i - 1] = _stride[D - i] * _shape[D - i - 1];
         }
         check();
-        head = new dtype[*_stride];
+        head = new dtype[size()];
     }
 
     /**
@@ -109,15 +113,15 @@ class ndarray {
     template<typename T>
     ndarray(const ndarray<T, D> & x): _shape(nullptr), _stride(nullptr), head(nullptr) {
         if(!x.empty()) {
-            _shape = new uint[D];
-            _stride = new uint[D + 1];
-            for(uint i = 0; i < D; i++) {
+            _shape = new size_t[D];
+            _stride = new size_t[D + 1];
+            for(int i = 0; i < D; i++) {
                 _shape[i] = x.shape(i);
                 _stride[i + 1] = x.stride(i);
             }
             _stride[0] = x.size();
             head = new dtype[x.size()];
-            for(uint i = 0; i < *_stride; i++) {
+            for(size_t i = 0; i < size(); i++) {
                 head[i] = x[i];
             }
         }
@@ -153,29 +157,29 @@ class ndarray {
     ndarray<dtype, D> & operator= (dtype val) {
         if(empty())
             return *this;
-        for(uint i = 0; i < *_stride; i++)
+        for(size_t i = 0; i < size(); i++)
             head[i] = val;
         return *this;
     }
     bool empty() const {
         return (_stride == nullptr);
     }
-    uint size() const {
+    size_t size() const {
         return *_stride;
     }
-    uint dim() const {
+    int dim() const {
         return D;
     }
-    uint shape(uint i) const {
+    size_t shape(int i) const {
         return _shape[i];
     }
-    const uint * shape() const {
+    const size_t * shape() const {
         return _shape;
     }
-    uint stride(uint i) const {
+    size_t stride(int i) const {
         return _stride[i + 1];
     }
-    const uint * stride() const {
+    const size_t * stride() const {
         return _stride + 1;
     }
 
@@ -186,10 +190,10 @@ class ndarray {
      * + Good efficiency!
      * + If dim==1, use [] rather than ()
      */
-    dtype & operator[](uint rawind) {
+    dtype & operator[](size_t rawind) {
         return *(head + rawind);
     }
-    const dtype & operator[](uint rawind) const {
+    const dtype & operator[](size_t rawind) const {
         return *(head + rawind);
     }
 
@@ -198,19 +202,19 @@ class ndarray {
      * @param coo   the coordinates of an element
      * @return The indexed element
      */
-    dtype & operator()(uint *coo) {
-        uint offset = 0;
-        for(uint i = 0; i < D; i++) {
+    dtype & operator()(const size_t *coo) {
+        size_t offset = 0;
+        for(int i = 0; i < D; i++) {
             offset += coo[i] * _stride[i + 1];
         }
         return head[offset];
     }
 
-    uint adder(uint *p, uint last) const {
+    size_t adder(size_t *p, size_t last) const {
         return *p * last;
     }
     template<typename... Args>
-    uint adder(uint *p, uint first, Args... args) const {
+    size_t adder(size_t *p, size_t first, Args... args) const {
         return *p * first + adder(p + 1, args...);
     }
 
@@ -234,6 +238,7 @@ class ndarray {
         return *(head + adder(_stride + 1, args...));
     }
 
+    template<bool dir>
     /**
      * @brief Roll the index in a given axis with periodical boundary condition
      * @param rawind raw index
@@ -243,44 +248,38 @@ class ndarray {
      * + For corresponding negative axis: `-dim, 1-dim,..., -1`
      * @return Raw index after rolling
      */
-    uint rollindex(uint rawind, int axis, int dir = 1) const {
-        uint axisind = (rawind % _stride[axis]) / _stride[axis + 1];
-        if(dir == 1) {
-            rawind += _stride[axis + 1];
-            if(axisind + 1 == _shape[axis])
-                rawind -= _stride[axis];
-        } else {
-            rawind -= _stride[axis + 1];
-            if(axisind == 0)
-                rawind += _stride[axis];
-        }
+    size_t rollindex(size_t rawind, int axis) const {
+        size_t axisind = (rawind % _stride[axis]) / _stride[axis + 1];
+        rawind += (2*dir-1)*_stride[axis + 1];
+        if(axisind == dir*(_shape[axis]-1))
+            rawind -= (2*dir-1)*_stride[axis];
         return rawind;
     }
     /**
      * @brief roll ind for unknow positiveness by using rollindex
      */
-    uint rollind(int rawind, int ax) const {
+    size_t rollind(size_t rawind, int ax) const {
         if(ax < 0) {
-            return rollindex(rawind, ax + D, -1);
+            return rollindex<false>(rawind, ax + D);
         } else {
-            return rollindex(rawind, ax, 1);
+            return rollindex<true>(rawind, ax);
         }
     }
 
     /// Transpose between two axis
-    void transpose(uint i = 1, uint j = 0) {
+    void transpose(int i = 1, int j = 0) {
         swap(_stride[i + 1], _stride[j + 1]);
         swap(_shape[i + 1], _shape[j + 1]);
     }
-    uint size_attached() const { ///< empty condition
-        uint s = sizeof(ndarray<dtype, D>);
-        s += sizeof(uint) * (2 * D + 1);
+    int size_attached() const { ///< empty condition
+        int s = sizeof(ndarray<dtype, D>);
+        s += sizeof(size_t) * (2 * D + 1);
         return s;
     }
-    vector<uint> subind(uint ind) const {
-        vector<uint> t;
+    vector<size_t> subind(size_t ind) const {///???
+        vector<size_t> t;
         t.reserve(D);
-        for(int i = int(D) - 1; i >= 0; i--) {
+        for(int i = D - 1; i >= 0; i--) {
             t[i] = ind % _stride[i];
             ind /= _stride[i];
         }
@@ -293,10 +292,34 @@ class ndarray {
         return *this->pm<-1>(rhs);
     }
     ndarray<dtype, D>& operator-(){
-        for(uint i=0;i<*_stride;i++){
-            head[i]*=-1;
+        ndarray<dtype, D> tmp(*this);
+        for(size_t i=0;i<size();i++){
+            tmp[i]=-head[i];
         }
         return *this;
+    }
+    ndarray<dtype, D>& operator-(const ndarray<dtype, D> &rhs){
+        ndarray<dtype, D> tmp(*this);
+        for(size_t i=0;i<size();i++){
+            tmp[i]=head[i]-rhs[i];
+        }
+        return tmp;
+    }
+    ndarray<dtype, D>& operator+(const ndarray<dtype, D> &rhs){
+        ndarray<dtype, D> tmp(*this);
+        for(size_t i=0;i<size();i++){
+            tmp[i]=head[i]+rhs[i];
+        }
+        return tmp;
+    }
+    index_t index() const{
+        return shape();
+    }
+    iterator begin(){
+        return head;
+    }
+    iterator end(){
+        return head+size();
     }
 };
 
@@ -329,10 +352,10 @@ class matrix: public ndarray<dtype, 2> {
         }
         return c;
     }
-    uint nrow() const {
+    int nrow() const {
         return this->empty() ? 0 : this->shape(0);
     }
-    uint ncol() const {
+    int ncol() const {
         return this->empty() ? 0 : this->shape(1);
     }
 };
