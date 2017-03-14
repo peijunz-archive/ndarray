@@ -20,6 +20,7 @@ using namespace std;
 template <typename dtype, int D>
 /// The n-Dimensional C-style array template class
 class ndarray {
+    static_assert(D > 0, "Dimension should be positive!");
   public:
     using size_t=int32_t;
     using iterator=dtype *;
@@ -41,12 +42,6 @@ class ndarray {
                 exit(0);
             }
         }
-    }
-    template<int N>
-    ndarray<dtype, D>& pm(const ndarray<dtype, D> &rhs){
-        for(size_t i = 0; i < size(); i++)
-            head[i] += N*rhs[i];
-        return *this;
     }
 
   public:
@@ -285,30 +280,41 @@ class ndarray {
         }
         return t;
     }
-    ndarray<dtype, D>& operator+=(const ndarray<dtype, D> &rhs){
-        return this->pm<1>(rhs);
-    }
-    ndarray<dtype, D>& operator-=(const ndarray<dtype, D> &rhs){
-        return *this->pm<-1>(rhs);
-    }
-    ndarray<dtype, D>& operator-(){
+    ndarray<dtype, D>& operator-() const{
         ndarray<dtype, D> tmp(*this);
         for(size_t i=0;i<size();i++){
             tmp[i]=-head[i];
         }
         return *this;
     }
-    ndarray<dtype, D>& operator-(const ndarray<dtype, D> &rhs){
-        ndarray<dtype, D> tmp(*this);
-        for(size_t i=0;i<size();i++){
-            tmp[i]=head[i]-rhs[i];
-        }
-        return tmp;
+    template<int N>
+    /**
+     * Adding rhs with some constexpr coefficient
+     * Also foundation for plus, minus
+     */
+    ndarray<dtype, D>& pm(const ndarray<dtype, D> &rhs){
+        for(size_t i = 0; i < size(); i++)
+            head[i] += N*rhs[i];
+        return *this;
     }
-    ndarray<dtype, D>& operator+(const ndarray<dtype, D> &rhs){
+    ndarray<dtype, D>& operator+=(const ndarray<dtype, D> &rhs){
+        return this->pm<1>(rhs);
+    }
+    ndarray<dtype, D>& operator-=(const ndarray<dtype, D> &rhs){
+        return *this->pm<-1>(rhs);
+    }
+    ///< Not using += and -= directly because of the copying cost
+    ndarray<dtype, D>& operator+(const ndarray<dtype, D> &rhs) const {
         ndarray<dtype, D> tmp(*this);
         for(size_t i=0;i<size();i++){
             tmp[i]=head[i]+rhs[i];
+        }
+        return tmp;
+    }
+    ndarray<dtype, D>& operator-(const ndarray<dtype, D> &rhs) const {
+        ndarray<dtype, D> tmp(*this);
+        for(size_t i=0;i<size();i++){
+            tmp[i]=head[i]-rhs[i];
         }
         return tmp;
     }

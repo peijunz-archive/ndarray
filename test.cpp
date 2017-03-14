@@ -14,5 +14,6 @@ int main()
         coo.print();
         cout<<arr(coo())<<endl;
     }while(++coo);
+    cout<<sizeof (arr)<<endl;
     return 0;
 }
