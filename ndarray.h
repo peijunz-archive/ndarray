@@ -1,10 +1,7 @@
 #ifndef NDARRAY_H
 #define NDARRAY_H
 #include <iostream>
-#include <vector>
 #include <initializer_list>
-#include "nditer.h"
-#define self (*this)
 using namespace std;
 /**
  * @file ndarray.h
@@ -24,7 +21,7 @@ class ndarray {
   public:
     using size_t=int32_t;
     using iterator=dtype *;
-    using index_t=nditer<D, size_t>;
+    using const_iterator=const dtype *;
   private:
     size_t *_shape;         ///< shape of each dimension
     /**
@@ -271,15 +268,6 @@ class ndarray {
         s += sizeof(size_t) * (2 * D + 1);
         return s;
     }
-    vector<size_t> subind(size_t ind) const {///???
-        vector<size_t> t;
-        t.reserve(D);
-        for(int i = D - 1; i >= 0; i--) {
-            t[i] = ind % _stride[i];
-            ind /= _stride[i];
-        }
-        return t;
-    }
     ndarray<dtype, D>& operator-() const{
         ndarray<dtype, D> tmp(*this);
         for(size_t i=0;i<size();i++){
@@ -318,13 +306,16 @@ class ndarray {
         }
         return tmp;
     }
-    index_t index() const{
-        return shape();
-    }
-    iterator begin(){
+    iterator begin() const {
         return head;
     }
-    iterator end(){
+    iterator end() const {
+        return head+size();
+    }
+    const_iterator cbegin() const {
+        return head;
+    }
+    const_iterator cend() const {
         return head+size();
     }
 };
@@ -337,7 +328,7 @@ class matrix: public ndarray<dtype, 2> {
     void print() {
         for(int i = 0; i < this->shape(0); i++) {
             for(int j = 0; j < this->shape(1); j++) {
-                cout << self(i, j) << '\t';
+                cout << (*this)(i, j) << '\t';
             }
             cout << endl;
         }
@@ -352,7 +343,7 @@ class matrix: public ndarray<dtype, 2> {
         for(int i = 0; i < c.shape(0); i++) {
             for(int j = 0; j < c.shape(1); j++) {
                 for(int k = 0; k < this->shape(1); k++) {
-                    c(i, j) += self(i, k) * rhs(k, j);
+                    c(i, j) += (*this)(i, k) * rhs(k, j);
                 }
             }
         }

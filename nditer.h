@@ -1,6 +1,7 @@
 #ifndef nditer_H
 #define nditer_H
 #include <iostream>
+#include "ndarray.h"
 using namespace std;
 /**
  * @file nditer.h
@@ -16,19 +17,27 @@ private:
 public:
     /// An array restoring current sub-index
     size_t _index[D+1];
-    nditer(initializer_list<uint> l){
+    nditer(initializer_list<uint> l, int ind=0){
         copy(begin(l), end(l), _shape);
-        for(size_t i=0;i<D+1;i++){
-            _index[i]=0;
-        }
+        setup(ind);
     }
-    nditer(const size_t *sh){
+    
+    template<typename dtype>
+    nditer(const ndarray<int, D> & arr, int ind=0){
+        copy(arr.shape(), arr.shape()+D, _shape);
+        setup(ind);
+    }
+    nditer(const size_t *sh, int ind=0){
         copy(sh, sh+D, _shape);
-        for(size_t i=0;i<D+1;i++){
-            _index[i]=0;
+        setup(ind);
+    }
+    void setup(int ind=0){
+        _index[0]=0;
+        for(int i = D - 1; i >= 0; i--) {
+            _index[i+1] = ind % _shape[i];
+            ind /= _shape[i];
         }
     }
-
     /**
      * @brief Go one step further for corresponding raw index
      * @return If the iterator reached the end or not
