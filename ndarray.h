@@ -7,10 +7,6 @@ using namespace std;
  * @file ndarray.h
  * @author zpj
  * @brief The n-Dimensional array template for n>1
- * @todo
- * + broadcasting?
- * + Math operations
- * + Make dimension a template argument
  *
  * Should have a view class for slicing?
  */
@@ -321,6 +317,9 @@ class ndarray {
 };
 
 template<class dtype>
+/**
+ * Two dimensional array---matrix
+ */
 class matrix: public ndarray<dtype, 2> {
   public:
     using ndarray<dtype, 2>::operator=;
@@ -333,6 +332,9 @@ class matrix: public ndarray<dtype, 2> {
             cout << endl;
         }
     }
+    /**
+     * Matrix product (deprecated due to inefficiency)
+     */
     matrix<dtype> operator*(matrix<dtype> &rhs) {
         matrix<dtype> c{this->shape(0), rhs.shape(1)};
         c = 0;
