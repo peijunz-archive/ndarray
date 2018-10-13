@@ -1,11 +1,12 @@
 #include <iostream>
+#include <vector>
 #include "ndarray.h"
 #include "nditer.h"
 using namespace std;
 
 int main()
 {
-    int m=10000, n=1024;
+    int m=5, n=8;
     matrix<int> arr{m, n};
     arr = 1;
     for (int i=1; i<m; i++){
@@ -18,5 +19,7 @@ int main()
     }
     cout << arr(m-1, n-1)<<endl;
     cout<<arr;
+    vector<int> v{3, 4};
+    cout<<arr[v.begin()]<<endl;
     return 0;
 }
